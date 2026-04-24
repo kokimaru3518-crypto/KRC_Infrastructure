@@ -1,2 +1,4 @@
 # KRC_Infrastructure
 KRC_AI同好会のインフラ構築
+最終的にgithubでファイル共有、supabaseでデータの管理、jiraっぽいものを作っていきます。
+全て未知の領域なので悪しからず。
