@@ -1,0 +1,172 @@
+
+> krc-server@0.1.0 lint
+> eslint
+
+
+C:\Users\S023\KRC - コピー\krc-server\app\api\webhook\github\route.ts
+  52:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\page.tsx
+  26:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  39:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\page.tsx:39:5
+  37 |       return;
+  38 |     }
+> 39 |     setUserId(uid);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  40 |     fetchProjectData(uid);
+  41 |   }, [project_id]);
+  42 |                                                                                                                                                                                                react-hooks/set-state-in-effect
+  40:5   error    Error: Cannot access variable before it is declared
+
+`fetchProjectData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\page.tsx:40:5
+  38 |     }
+  39 |     setUserId(uid);
+> 40 |     fetchProjectData(uid);
+     |     ^^^^^^^^^^^^^^^^ `fetchProjectData` accessed before it is declared
+  41 |   }, [project_id]);
+  42 |
+  43 |   const fetchProjectData = async (currentUserId: string) => {
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\page.tsx:43:3
+  41 |   }, [project_id]);
+  42 |
+> 43 |   const fetchProjectData = async (currentUserId: string) => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |     // プロジェクト情報の取得
+     | ^^^^^^^^^^^^^^^^^^
+> 45 |     const { data: pData, error: pError } = await supabase
+     …
+     | ^^^^^^^^^^^^^^^^^^
+> 72 |     else setTasks(tData || []);
+     | ^^^^^^^^^^^^^^^^^^
+> 73 |   };
+     | ^^^^^ `fetchProjectData` is declared here
+  74 |
+  75 |   const handleApprove = async (memberId: string) => {
+  76 |     const { error } = await supabase  react-hooks/immutability
+  41:6   warning  React Hook useEffect has missing dependencies: 'fetchProjectData' and 'router'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\tasks\new\page.tsx
+  13:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  19:5   error    Error: Cannot access variable before it is declared
+
+`fetchMembers` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\tasks\new\page.tsx:19:5
+  17 |
+  18 |   useEffect(() => {
+> 19 |     fetchMembers();
+     |     ^^^^^^^^^^^^ `fetchMembers` accessed before it is declared
+  20 |   }, []);
+  21 |
+  22 |   const fetchMembers = async () => {
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\[project_id]\tasks\new\page.tsx:22:3
+  20 |   }, []);
+  21 |
+> 22 |   const fetchMembers = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 23 |     // 担当者のサジェスト用にプロジェクトメンバーを取得
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 24 |     const { data } = await supabase
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |       .from('project_members')
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |       .select('user_id')
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |       .eq('project_id', project_id)
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |       .neq('role', 'pending');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |     if (data) setMembers(data);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |   };
+     | ^^^^^ `fetchMembers` is declared here
+  31 |
+  32 |   const handleSubmit = async (e: React.FormEvent) => {
+  33 |     e.preventDefault();  react-hooks/immutability
+  20:6   warning  React Hook useEffect has a missing dependency: 'fetchMembers'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\new\page.tsx
+  23:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\new\page.tsx:23:5
+  21 |       return;
+  22 |     }
+> 23 |     setUserId(uid);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  24 |   }, []);
+  25 |
+  26 |   const handleSubmit = async (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+  24:6  warning  React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\page.tsx
+  28:5  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\page.tsx:28:5
+  26 |       return;
+  27 |     }
+> 28 |     setUserId(uid);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  29 |     fetchProjects();
+  30 |   }, []);
+  31 |                                                                                                                                                                     react-hooks/set-state-in-effect
+  29:5  error    Error: Cannot access variable before it is declared
+
+`fetchProjects` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\page.tsx:29:5
+  27 |     }
+  28 |     setUserId(uid);
+> 29 |     fetchProjects();
+     |     ^^^^^^^^^^^^^ `fetchProjects` accessed before it is declared
+  30 |   }, []);
+  31 |
+  32 |   const fetchProjects = async () => {
+
+C:\Users\S023\KRC - コピー\krc-server\app\projects\page.tsx:32:3
+  30 |   }, []);
+  31 |
+> 32 |   const fetchProjects = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |     const { data, error: sbError } = await supabase
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |       .from('projects')
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |   };
+     | ^^^^^ `fetchProjects` is declared here
+  44 |
+  45 |   const handleDelete = async (projectId: string, e: React.MouseEvent) => {
+  46 |     e.preventDefault();  react-hooks/immutability
+  30:6  warning  React Hook useEffect has missing dependencies: 'fetchProjects' and 'router'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+
+C:\Users\S023\KRC - コピー\krc-server\service\projectservice.ts
+  4:10  warning  'getAllProject' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 14 problems (9 errors, 5 warnings)
+
