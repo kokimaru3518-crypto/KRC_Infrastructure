@@ -13,6 +13,9 @@ type Task = {
   priority: number | null;
   situation: string | null;
   created_at: string | null;
+  users?: {
+    user_name: string;
+  };
 };
 
 type Member = {
@@ -75,7 +78,10 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
 
     const { data: tData, error: tError } = await supabase
       .from('tasks')
-      .select('*')
+      .select(`
+        *,
+        users(user_name)
+      `)
       .eq('project_id', project_id)
       .order('created_at', { ascending: false });
     if (tError) setError(tError.message);
@@ -152,12 +158,18 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
         </select>
 
         <div className="flex gap-2 items-center">
-          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white shrink-0 shadow-sm ${task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`} title={`優先度: ${task.priority}`}>
-            P{task.priority || 0}
+          <div 
+            className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0 ${
+              task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 
+              task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 
+              'bg-gradient-to-br from-indigo-500 to-blue-600'
+            }`}
+          >
+            {task.priority === 2 ? 'High' : task.priority === 1 ? 'Middle' : 'Low'}
           </div>
-          {task.user_id && (
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`担当者: ${task.user_id}`}>
-              {task.user_id.charAt(0).toUpperCase()}
+          {task.users?.user_name && (
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`担当者: ${task.users.user_name}`}>
+              {task.users.user_name.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
