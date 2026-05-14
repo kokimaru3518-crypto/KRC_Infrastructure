@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../supabase/client';
+import { getSession, type Session } from '../../../lib/session';
 import Link from 'next/link';
 
 type Task = {
@@ -24,17 +25,15 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<{ project_id: string, project_name: string, text: string | null, created_at: string | null } | null>(null);
-  const [userId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('krc_user_id');
-  });
+  const [session, setSession] = useState<Session | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
-  const fetchProjectData = useCallback(async (currentUserId: string) => {
-    const isAdmin = currentUserId === 'admin';
+  const fetchProjectData = useCallback(async (currentSession: Session) => {
+    const isAdmin = currentSession.user_name === 'admin';
+    const currentUUID = currentSession.user_id;
 
     // まずメンバーかどうかを確認する
     const { data: mData, error: mError } = await supabase
@@ -51,7 +50,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       setMembers(mData || []);
       setIsLeader(true);
     } else {
-      const currentUserRole = mData?.find(m => m.user_id === currentUserId)?.role;
+      // UUID でメンバーシップを確認
+      const currentUserRole = mData?.find(m => m.user_id === currentUUID)?.role;
       const isMember = !!currentUserRole && currentUserRole !== 'pending';
 
       // 参加していない（または申請中）ユーザーはプロジェクト一覧へ戻す
@@ -84,15 +84,18 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
 
   const initialized = useRef(false);
   useEffect(() => {
-    if (!userId) {
-      router.push('/');
-      return;
-    }
     if (!initialized.current) {
       initialized.current = true;
-      void fetchProjectData(userId);
+      getSession().then((s) => {
+        if (!s) {
+          router.push('/');
+        } else {
+          setSession(s);
+          void fetchProjectData(s);
+        }
+      });
     }
-  }, [userId, router, fetchProjectData]);
+  }, [router, fetchProjectData]);
 
   const handleApprove = async (memberId: string) => {
     const { error } = await supabase
@@ -101,7 +104,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .eq('project_id', project_id)
       .eq('user_id', memberId);
     if (error) setError('Approve failed: ' + error.message);
-    else fetchProjectData(userId!);
+    else fetchProjectData(session!);
   };
 
   const handleReject = async (memberId: string) => {
@@ -111,7 +114,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .eq('project_id', project_id)
       .eq('user_id', memberId);
     if (error) setError('Reject failed: ' + error.message);
-    else fetchProjectData(userId!);
+    else fetchProjectData(session!);
   };
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
@@ -125,7 +128,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     }
   };
 
-  if (!userId || !project) return <div className="p-8 text-[#5E6C84]">Loading project...</div>;
+  if (!session || !project) return <div className="p-8 text-[#5E6C84]">Loading project...</div>;
 
   const todoTasks = tasks.filter(t => !t.situation || t.situation === 'waiting' || t.situation === 'TO DO');
   const inProgressTasks = tasks.filter(t => t.situation === 'in_progress' || t.situation === 'IN PROGRESS');

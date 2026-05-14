@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../../../supabase/client';
+import { getSession } from '../../../../../lib/session';
 import Link from 'next/link';
 
 export default function NewTaskPage({ params }: { params: Promise<{ project_id: string }> }) {
@@ -17,14 +18,15 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
   const supabase = useMemo(() => createClient(), []);
 
   const fetchMembers = useCallback(async () => {
-    const currentUserId = localStorage.getItem('krc_user_id');
-    if (!currentUserId) {
+    const session = await getSession();
+    if (!session) {
       router.push('/');
       return;
     }
 
     // admin はリーダーチェックをバイパス
-    const isAdmin = currentUserId === 'admin';
+    const isAdmin = session.user_name === 'admin';
+    const currentUUID = session.user_id;
 
     const { data } = await supabase
       .from('project_members')
@@ -33,7 +35,8 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
       .neq('role', 'pending');
 
     if (data) {
-      const isLeader = isAdmin || data.some(m => m.user_id === currentUserId && m.role === 'leader');
+      // UUID でリーダー判定
+      const isLeader = isAdmin || data.some(m => m.user_id === currentUUID && m.role === 'leader');
       if (!isLeader) {
         router.push(`/projects/${project_id}`);
         return;

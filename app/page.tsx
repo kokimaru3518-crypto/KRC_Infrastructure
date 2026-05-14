@@ -2,70 +2,41 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../supabase/client';
 
 export default function LoginPage() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (!userId || !password) {
       setError('ユーザーIDとパスワードを入力してください');
+      setLoading(false);
       return;
     }
 
-    if (isLogin) {
-      // ログイン処理: usersテーブルの user_name で検索
-      const { data, error: sbError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('user_name', userId)
-        .eq('password', password)
-        .single();
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
 
-      if (sbError) {
-        console.error('Supabase Error:', sbError);
-        if (sbError.code === 'PGRST116') {
-          // データが0件 = ユーザーIDまたはパスワードが違う
-          setError('ユーザーIDまたはパスワードが間違っています。');
-        } else if (sbError.message?.includes('row-level security')) {
-          // RLSエラー
-          setError('データベースのアクセス権エラーです。Supabase側のRLSポリシーを確認してください。(RLS): ' + sbError.message);
-        } else {
-          setError('ログインに失敗しました: ' + sbError.message);
-        }
-      } else if (!data) {
-        setError('ユーザーIDまたはパスワードが間違っています。');
-      } else {
-        // localStorageには user_name を保存（他の画面で表示やキーとして使うため）
-        localStorage.setItem('krc_user_id', data.user_name);
-        router.push('/projects');
-      }
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_name: userId, password }),
+    });
+
+    const json = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(json.error || 'エラーが発生しました');
     } else {
-      // 登録処理: user_idはUUIDを生成、user_nameに入力されたメール(またはID)を登録
-      const newUserId = crypto.randomUUID();
-      const { error: sbError } = await supabase
-        .from('users')
-        .insert({
-          user_id: newUserId,
-          password: password,
-          user_name: userId,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
-
-      if (sbError) {
-        setError('登録に失敗しました: ' + sbError.message);
-      } else {
-        localStorage.setItem('krc_user_id', userId);
-        router.push('/projects');
-      }
+      router.push('/projects');
     }
   };
 
@@ -116,9 +87,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#0052CC] hover:bg-[#0047b3] active:bg-[#003d99] text-white font-bold py-16 px-10 rounded-2xl transition-all text-4xl shadow-sm hover:shadow-md mt-16"
+            disabled={loading}
+            className="w-full bg-[#0052CC] hover:bg-[#0047b3] active:bg-[#003d99] text-white font-bold py-16 px-10 rounded-2xl transition-all text-4xl shadow-sm hover:shadow-md mt-16 disabled:opacity-60"
           >
-            {isLogin ? 'Log in' : 'Sign up'}
+            {loading ? '処理中...' : (isLogin ? 'Log in' : 'Sign up')}
           </button>
         </form>
 

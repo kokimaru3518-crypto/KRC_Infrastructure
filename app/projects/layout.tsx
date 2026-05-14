@@ -3,27 +3,29 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { getSession, type Session } from '../../lib/session';
 
 export default function ProjectsLayout({ children }: { children: React.ReactNode }) {
-    const [userId, setUserId] = useState<string | null>(null);
+    const [session, setSession] = useState<Session | null>(null);
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        const id = localStorage.getItem('krc_user_id');
-        if (!id) {
-            router.push('/');
-        } else {
-            setUserId(id);
-        }
+        getSession().then((s) => {
+            if (!s) {
+                router.push('/');
+            } else {
+                setSession(s);
+            }
+        });
     }, [router]);
 
-    const handleLogout = () => {
-        localStorage.removeItem('krc_user_id');
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
         router.push('/');
     };
 
-    if (!userId) return null;
+    if (!session) return null;
 
     return (
         <div className="min-h-screen bg-[#F4F5F7] flex flex-col font-sans text-[#172B4D]">
@@ -43,7 +45,7 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="hidden sm:block text-sm font-medium text-[#42526E]">
-                        {userId}
+                        {session.user_name}
                     </div>
                     <button
                         onClick={handleLogout}

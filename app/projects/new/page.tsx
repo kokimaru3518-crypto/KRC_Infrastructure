@@ -1,45 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../supabase/client';
+import { getSession, type Session } from '../../../lib/session';
 import Link from 'next/link';
 
 export default function NewProjectPage() {
   const [projectName, setProjectName] = useState('');
   const [text, setText] = useState('');
   const [initialMembers, setInitialMembers] = useState('');
-  const [userId, setUserId] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState('');
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    const uid = localStorage.getItem('krc_user_id');
-    if (!uid) {
-      router.push('/');
-      return;
-    }
-    setUserId(uid);
+    getSession().then((s) => {
+      if (!s) router.push('/');
+      else setSession(s);
+    });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!session) return;
 
-    // user_name から実際の UUID を取得する
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('user_id')
-      .eq('user_name', userId)
-      .single();
-
-    if (userError || !userData) {
-      setError('ユーザー情報の取得に失敗しました: ' + userError?.message);
-      return;
-    }
-    const leaderUUID = userData.user_id;
-
+    // session.user_id は既に UUID なので DB 変換不要
+    const leaderUUID = session.user_id;
     const newProjectId = crypto.randomUUID();
 
     const { error: projectError } = await supabase
@@ -62,7 +50,7 @@ export default function NewProjectPage() {
     if (initialMembers.trim()) {
       const memberNames = initialMembers.split(',').map(id => id.trim()).filter(id => id);
       for (const mName of memberNames) {
-        // 追加メンバーも user_name → UUID に解決する
+        // 追加メンバーは user_name → UUID に解決する
         const { data: mData } = await supabase
           .from('users')
           .select('user_id')
@@ -85,6 +73,8 @@ export default function NewProjectPage() {
       router.push('/projects');
     }
   };
+
+  if (!session) return null;
 
   return (
     <div className="p-8 max-w-2xl mx-auto mt-10">
@@ -134,7 +124,7 @@ export default function NewProjectPage() {
                 value={initialMembers}
                 onChange={(e) => setInitialMembers(e.target.value)}
                 className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none"
-                placeholder="e.g. alice, bob (comma separated IDs)"
+                placeholder="e.g. alice, bob (comma separated User IDs)"
               />
               <p className="text-xs text-[#5E6C84] mt-1.5">You will automatically be added as the Project Lead.</p>
             </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '../../supabase/client';
+import { getSession, type Session } from '../../lib/session';
 import Link from 'next/link';
 
 type Project = {
@@ -14,12 +14,8 @@ type Project = {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [userId, setUserId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('krc_user_id');
-  });
+  const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState('');
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const fetchProjects = useCallback(async () => {
@@ -37,15 +33,16 @@ export default function ProjectsPage() {
 
   const initialized = useRef(false);
   useEffect(() => {
-    if (!userId) {
-      router.push('/');
-      return;
-    }
     if (!initialized.current) {
       initialized.current = true;
-      void fetchProjects();
+      getSession().then((s) => {
+        if (s) {
+          setSession(s);
+          void fetchProjects();
+        }
+      });
     }
-  }, [userId, router, fetchProjects]);
+  }, [fetchProjects]);
 
   const handleDelete = async (projectId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,25 +64,14 @@ export default function ProjectsPage() {
   const handleJoinRequest = async (projectId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!userId) return;
+    if (!session) return;
 
-    // user_name から実際の UUID を取得する
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('user_id')
-      .eq('user_name', userId)
-      .single();
-
-    if (userError || !userData) {
-      setError('ユーザー情報の取得に失敗しました: ' + userError?.message);
-      return;
-    }
-
+    // session.user_id は UUID なのでそのまま挿入できる
     const { error: sbError } = await supabase
       .from('project_members')
       .insert({
         project_id: projectId,
-        user_id: userData.user_id,
+        user_id: session.user_id,
         role: 'pending',
       });
 
@@ -100,7 +86,7 @@ export default function ProjectsPage() {
     }
   };
 
-  if (!userId) return null;
+  if (!session) return null;
 
   return (
     <div className="p-8 max-w-[1200px] mx-auto">
