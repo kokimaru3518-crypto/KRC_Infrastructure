@@ -17,17 +17,17 @@ export type Database = {
       project_members: {
         Row: {
           project_id: string
-          role: string | null
+          role: string
           user_id: string
         }
         Insert: {
           project_id: string
-          role?: string | null
+          role?: string
           user_id: string
         }
         Update: {
           project_id?: string
-          role?: string | null
+          role?: string
           user_id?: string
         }
         Relationships: [
