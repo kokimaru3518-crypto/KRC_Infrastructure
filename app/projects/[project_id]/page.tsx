@@ -12,6 +12,9 @@ type Task = {
   priority: number | null;
   user_id: string | null;
   created_at: string | null;
+  users: {
+    user_name: string;
+  } | null;
 };
 
 type Project = {
@@ -21,42 +24,45 @@ type Project = {
   created_at: string | null;
 };
 
+const priorityMap: { [key: number]: { label: string, color: string } } = {
+  2: { label: 'High', color: 'text-red-600 bg-red-50 border-red-100' },
+  1: { label: 'Middle', color: 'text-amber-600 bg-amber-50 border-amber-100' },
+  0: { label: 'Low', color: 'text-slate-600 bg-slate-50 border-slate-100' },
+};
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ project_id: string }> }) {
   const { project_id } = use(params);
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [session, setSession] = useState<Session | null>(null);
   const supabase = useMemo(() => createClient(), []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     
     // プロジェクト情報の取得
-    const { data: pData, error: pError } = await supabase
+    const { data: pData } = await supabase
       .from('projects')
       .select('*')
       .eq('project_id', project_id)
       .single();
 
-    if (pError) {
-      setError('プロジェクトの読み込みに失敗しました');
-    } else {
-      setProject(pData);
-    }
+    if (pData) setProject(pData);
 
-    // タスク一覧の取得
-    const { data: tData, error: tError } = await supabase
+    // タスク一覧の取得（担当者名を含む）
+    const { data: tData } = await supabase
       .from('tasks')
-      .select('*')
+      .select(`
+        *,
+        users (
+          user_name
+        )
+      `)
       .eq('project_id', project_id)
       .order('created_at', { ascending: false });
 
-    if (!tError) {
-      setTasks(tData || []);
-    }
-
+    if (tData) setTasks(tData);
     setLoading(false);
   }, [project_id, supabase]);
 
@@ -67,30 +73,40 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     });
   }, [fetchData]);
 
+  // ステータス更新処理
+  const updateTaskStatus = async (taskId: string, currentStatus: string | null) => {
+    const statuses = ['waiting', 'working', 'done'];
+    const nextStatus = statuses[(statuses.indexOf(currentStatus || 'waiting') + 1) % statuses.length];
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ situation: nextStatus })
+      .eq('task_id', taskId);
+
+    if (error) {
+      alert('ステータスの更新に失敗しました: ' + error.message);
+    } else {
+      // ローカル状態を更新して再描画
+      setTasks(tasks.map(t => t.task_id === taskId ? { ...t, situation: nextStatus } : t));
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 text-slate-500 flex justify-center items-center h-full min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mr-3"></div>
         読み込み中...
       </div>
     );
   }
 
-  if (!project) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-slate-500">プロジェクトが見つかりませんでした。</p>
-        <Link href="/projects" className="text-indigo-600 hover:underline mt-4 inline-block">
-          プロジェクト一覧へ戻る
-        </Link>
-      </div>
-    );
-  }
+  if (!project) return null;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <Link href="/projects" className="text-sm text-slate-500 hover:text-indigo-600 flex items-center gap-1 mb-4 transition-colors">
+        <Link href="/projects" className="text-sm font-medium text-slate-400 hover:text-indigo-600 flex items-center gap-1 mb-4 transition-colors">
           &larr; プロジェクト一覧
         </Link>
         <div className="flex justify-between items-end">
@@ -108,43 +124,76 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
         </div>
       </div>
 
-      {/* Task Board (Simple List for now) */}
+      {/* Task List */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="font-bold text-slate-700">タスク一覧 ({tasks.length})</h2>
+        <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
+          <h2 className="font-bold text-slate-700 flex items-center gap-2">
+            タスク一覧
+            <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{tasks.length}</span>
+          </h2>
         </div>
         
         {tasks.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-slate-400">タスクがまだありません。</p>
-            <p className="text-sm text-slate-400 mt-1">「タスクを追加」ボタンから最初のタスクを作成しましょう。</p>
+          <div className="p-20 text-center">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            </div>
+            <p className="text-slate-500 font-medium">タスクがまだありません</p>
+            <Link href={`/projects/${project_id}/tasks/new`} className="text-indigo-600 text-sm hover:underline mt-2 inline-block font-semibold">
+              最初のタスクを作成しましょう
+            </Link>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {tasks.map((task) => (
-              <div key={task.task_id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className={`w-2 h-2 rounded-full ${
-                    task.situation === 'done' ? 'bg-green-400' : 
-                    task.situation === 'working' ? 'bg-blue-400' : 'bg-slate-300'
-                  }`} />
-                  <div>
-                    <h3 className="font-semibold text-slate-800">{task.task_name}</h3>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                        {task.situation || 'waiting'}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        優先度: {task.priority ?? 0}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button className="text-slate-300 group-hover:text-slate-600 transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="text-xs uppercase tracking-wider text-slate-400 font-bold">
+                  <th className="px-6 py-4">タスク名</th>
+                  <th className="px-6 py-4">状態</th>
+                  <th className="px-6 py-4">担当者</th>
+                  <th className="px-6 py-4">優先度</th>
+                  <th className="px-6 py-4">作成日</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {tasks.map((task) => {
+                  const prio = priorityMap[task.priority ?? 0] || priorityMap[0];
+                  return (
+                    <tr key={task.task_id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 font-bold text-slate-800">{task.task_name}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => updateTaskStatus(task.task_id, task.situation)}
+                          className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border transition-all hover:scale-105 active:scale-95 ${
+                            task.situation === 'done' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                            task.situation === 'working' ? 'bg-sky-50 text-sky-600 border-sky-100' : 
+                            'bg-slate-50 text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          {task.situation || 'waiting'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                            {task.users?.user_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <span className="text-sm text-slate-600 font-medium">{task.users?.user_name || '未割り当て'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${prio.color}`}>
+                          {prio.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-400">
+                        {task.created_at ? new Date(task.created_at).toLocaleDateString() : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
