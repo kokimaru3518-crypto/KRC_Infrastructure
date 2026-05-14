@@ -15,7 +15,7 @@ type Task = {
   created_at: string | null;
   users?: {
     user_name: string;
-  };
+  } | null;
 };
 
 type Member = {
