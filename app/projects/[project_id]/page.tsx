@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 // --- エラーを解消するための型定義 ---
 type ProjectMember = {
-  role: string | null; // ★ここが最重要！null を許容するように修正
+  role: string; // ★ここが最重要！null を許容するように修正
   users: {
     user_name: string;
   } | null;
