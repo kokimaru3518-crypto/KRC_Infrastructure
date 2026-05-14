@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useCallback } from 'react';
+import { useEffect, useState, use, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../supabase/client';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ type Task = {
   user_id: string | null;
   priority: number | null;
   situation: string | null;
-  created_at: string;
+  created_at: string | null;
 };
 
 type Member = {
@@ -24,12 +24,15 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   // プロジェクトの型を簡易的に定義
-  const [project, setProject] = useState<{project_id: string, project_name: string, text: string | null, created_at: string | null} | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [project, setProject] = useState<{ project_id: string, project_name: string, text: string | null, created_at: string | null } | null>(null);
+  const [userId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('krc_user_id');
+  });
   const [isLeader, setIsLeader] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchProjectData = useCallback(async (currentUserId: string) => {
     // プロジェクト情報の取得
@@ -63,15 +66,17 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     else setTasks(tData || []);
   }, [project_id, supabase]);
 
+  const initialized = useRef(false);
   useEffect(() => {
-    const uid = localStorage.getItem('krc_user_id');
-    if (!uid) {
+    if (!userId) {
       router.push('/');
       return;
     }
-    setUserId(uid);
-    fetchProjectData(uid);
-  }, [router, fetchProjectData]);
+    if (!initialized.current) {
+      initialized.current = true;
+      void fetchProjectData(userId);
+    }
+  }, [userId, router, fetchProjectData]);
 
   const handleApprove = async (memberId: string) => {
     const { error } = await supabase
@@ -98,7 +103,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex justify-between items-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
@@ -107,7 +112,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
             <h1 className="text-4xl font-extrabold text-slate-900">{project.project_name}</h1>
             <p className="text-slate-500 mt-2">{project.text}</p>
           </div>
-          <Link 
+          <Link
             href={`/projects/${project_id}/tasks/new`}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-transform transform hover:-translate-y-0.5"
           >
@@ -122,13 +127,13 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Tasks Area */}
           <div className="lg:col-span-2 space-y-6">
             <h2 className="text-2xl font-bold text-slate-800 flex items-center">
               Tasks <span className="ml-3 bg-indigo-100 text-indigo-800 py-1 px-3 rounded-full text-sm">{tasks.length}</span>
             </h2>
-            
+
             {tasks.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300">
                 <p className="text-slate-500 font-medium text-lg">No tasks yet.</p>
@@ -164,9 +169,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 {members.filter(m => m.role !== 'pending').map(m => (
                   <div key={m.user_id} className="flex items-center justify-between">
                     <span className="font-semibold text-slate-700 truncate w-2/3" title={m.user_id}>{m.user_id}</span>
-                    <span className={`text-xs px-3 py-1 rounded-full font-bold ${
-                      m.role === 'leader' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                    }`}>
+                    <span className={`text-xs px-3 py-1 rounded-full font-bold ${m.role === 'leader' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                      }`}>
                       {m.role}
                     </span>
                   </div>
@@ -186,13 +190,13 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                     <div key={m.user_id} className="bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                       <p className="font-medium text-slate-800 truncate mb-3" title={m.user_id}>{m.user_id}</p>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => handleApprove(m.user_id)}
                           className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
                         >
                           Approve
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleReject(m.user_id)}
                           className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg text-sm transition-colors"
                         >

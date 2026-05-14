@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, use, useCallback } from 'react';
+import { useState, useEffect, use, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../../supabase/client';
+import { createClient } from '../../../../../supabase/client';
 import Link from 'next/link';
 
 export default function NewTaskPage({ params }: { params: Promise<{ project_id: string }> }) {
@@ -10,10 +10,10 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
   const [taskName, setTaskName] = useState('');
   const [assignee, setAssignee] = useState(''); // user_id (gmail)
   const [priority, setPriority] = useState<number>(0);
-  const [members, setMembers] = useState<{user_id: string}[]>([]);
+  const [members, setMembers] = useState<{ user_id: string }[]>([]);
   const [error, setError] = useState('');
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchMembers = useCallback(async () => {
     // 担当者のサジェスト用にプロジェクトメンバーを取得
@@ -25,13 +25,17 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
     if (data) setMembers(data);
   }, [project_id, supabase]);
 
+  const initialized = useRef(false);
   useEffect(() => {
-    fetchMembers();
+    if (!initialized.current) {
+      initialized.current = true;
+      void fetchMembers();
+    }
   }, [fetchMembers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newTaskId = crypto.randomUUID();
 
     const { error: sbError } = await supabase
@@ -59,13 +63,13 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
           Back to Project
         </Link>
-        
+
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8">
             <h1 className="text-3xl font-extrabold text-white">Create New Task</h1>
             <p className="text-blue-100 mt-2 opacity-90">Add a new task to your project</p>
           </div>
-          
+
           <div className="p-8">
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg" role="alert">

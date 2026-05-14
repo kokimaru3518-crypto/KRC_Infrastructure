@@ -46,6 +46,7 @@ export default function LoginPage() {
           user_id: newUserId,
           password: password,
           user_name: userId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any); // database.types.ts にない列が追加された場合のエラーを防ぐため any をキャスト（または無視）
 
       if (sbError) {
@@ -63,7 +64,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-8 tracking-tight">
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h1>
-        
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <span className="block sm:inline">{error}</span>
@@ -94,7 +95,7 @@ export default function LoginPage() {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg"

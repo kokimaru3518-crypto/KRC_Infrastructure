@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// 管理者権限でSupabaseを操作するためのクライアント
-// ※ Edge FunctionsやAPI Routesでは、サービスロールキーを使用することでセキュリティルール(RLS)をバイパスできます。
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // .env.local に設定する必要があります
-);
-
 export async function POST(request: Request) {
   try {
+    // 管理者権限でSupabaseを操作するためのクライアント
+    // ※ Edge FunctionsやAPI Routesでは、サービスロールキーを使用することでセキュリティルール(RLS)をバイパスできます。
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    );
+
     // GitHubからのWebhookペイロードを取得
     const payload = await request.json();
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         // ブランチ名から task_id を抽出する（運用ルールに合わせて正規表現を調整）
         // ここでは "task-UUID" のような形式を想定
         const taskIdMatch = branchName.match(/task-([a-f0-9\-]+)/);
-        
+
         if (taskIdMatch && taskIdMatch[1]) {
           const taskId = taskIdMatch[1];
 

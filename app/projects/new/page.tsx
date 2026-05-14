@@ -20,6 +20,7 @@ export default function NewProjectPage() {
       router.push('/');
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserId(uid);
   }, [router]);
 
@@ -31,7 +32,7 @@ export default function NewProjectPage() {
     // ただしschema定義を見ると project_id に DEFAULT が無い場合がある。UUID生成が必要かも。
     // supabase/client経由でuuidを生成して入れる。
     const newProjectId = crypto.randomUUID();
-    
+
     const { error: projectError } = await supabase
       .from('projects')
       .insert({
@@ -76,13 +77,13 @@ export default function NewProjectPage() {
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
           Back to Projects
         </Link>
-        
+
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8">
             <h1 className="text-3xl font-extrabold text-white">Create New Project</h1>
             <p className="text-indigo-100 mt-2 opacity-90">Start a new initiative and invite your team</p>
           </div>
-          
+
           <div className="p-8">
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg" role="alert">
@@ -102,7 +103,7 @@ export default function NewProjectPage() {
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
                 <textarea
