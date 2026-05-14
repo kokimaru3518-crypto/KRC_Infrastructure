@@ -68,7 +68,8 @@ export default function NewProjectPage() {
           .select('user_id')
           .eq('user_name', mName)
           .single();
-        if (mData) {
+        // 自分自身（leader）と重複する場合はスキップ
+        if (mData && mData.user_id !== leaderUUID) {
           membersToInsert.push({ project_id: newProjectId, user_id: mData.user_id, role: 'member' });
         }
       }
