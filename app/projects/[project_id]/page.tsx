@@ -166,12 +166,14 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 </div>
               ))}
             </div>
-            <Link
-              href={`/projects/${project_id}/tasks/new`}
-              className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-1.5 px-4 rounded shadow-sm text-sm transition-colors flex items-center h-8"
-            >
-              Create Issue
-            </Link>
+            {isLeader && (
+              <Link
+                href={`/projects/${project_id}/tasks/new`}
+                className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-1.5 px-4 rounded shadow-sm text-sm transition-colors flex items-center h-8"
+              >
+                Create Issue
+              </Link>
+            )}
           </div>
         </div>
       </div>

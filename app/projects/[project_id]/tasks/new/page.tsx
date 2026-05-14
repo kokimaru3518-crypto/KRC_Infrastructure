@@ -12,17 +12,34 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
   const [priority, setPriority] = useState<number>(0);
   const [members, setMembers] = useState<{ user_id: string }[]>([]);
   const [error, setError] = useState('');
+  const [isCheckingUser, setIsCheckingUser] = useState(true);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const fetchMembers = useCallback(async () => {
+    const currentUserId = localStorage.getItem('krc_user_id');
+    if (!currentUserId) {
+      router.push('/');
+      return;
+    }
+
     const { data } = await supabase
       .from('project_members')
-      .select('user_id')
+      .select('user_id, role')
       .eq('project_id', project_id)
       .neq('role', 'pending');
-    if (data) setMembers(data);
-  }, [project_id, supabase]);
+
+    if (data) {
+      const isLeader = data.some(m => m.user_id === currentUserId && m.role === 'leader');
+      if (!isLeader) {
+        // Redirect non-leaders back to the project page
+        router.push(`/projects/${project_id}`);
+        return;
+      }
+      setMembers(data);
+      setIsCheckingUser(false);
+    }
+  }, [project_id, supabase, router]);
 
   const initialized = useRef(false);
   useEffect(() => {
@@ -31,6 +48,8 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
       void fetchMembers();
     }
   }, [fetchMembers]);
+
+  if (isCheckingUser) return <div className="p-8 text-[#5E6C84]">Loading...</div>;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
