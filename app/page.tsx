@@ -40,7 +40,7 @@ export default function LoginPage() {
       const adminSession = {
         user_id: 'admin-id',
         user_name: 'admin',
-        email: 'admin@example.com'
+        // emailはテーブルに存在しないため削除
       };
       document.cookie = `session=${JSON.stringify(adminSession)}; path=/; max-age=86400; SameSite=Lax`;
       window.location.href = '/projects';
@@ -58,7 +58,7 @@ export default function LoginPage() {
       const sessionData = {
         user_id: data.user_id,
         user_name: data.user_name,
-        email: data.email
+        // data.emailが存在しないため、sessionDataからも除外
       };
       document.cookie = `session=${JSON.stringify(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
       window.location.href = '/projects';
