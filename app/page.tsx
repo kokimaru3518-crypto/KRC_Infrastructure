@@ -42,7 +42,7 @@ export default function LoginPage() {
         user_name: 'admin',
         // emailはテーブルに存在しないため削除
       };
-      document.cookie = `session=${JSON.stringify(adminSession)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `krc_session=${JSON.stringify(adminSession)}; path=/; max-age=86400; SameSite=Lax`;
       window.location.href = '/projects';
       return;
     }
@@ -60,7 +60,7 @@ export default function LoginPage() {
         user_name: data.user_name,
         // data.emailが存在しないため、sessionDataからも除外
       };
-      document.cookie = `session=${JSON.stringify(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `krc_session=${JSON.stringify(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
       window.location.href = '/projects';
     } else {
       alert('ログインに失敗しました。ユーザー名またはパスワードが正しくありません。');
