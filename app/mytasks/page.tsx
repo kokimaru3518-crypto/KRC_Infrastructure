@@ -12,7 +12,7 @@ type Task = {
   situation: string | null;
   priority: number | null;
   due_date: string | null;
-  project_id: string;
+  project_id: string | null; // string | null に修正
   projects: {
     project_name: string;
   } | null;
@@ -50,7 +50,7 @@ export default function MyTasksPage() {
       .order('due_date', { ascending: true, nullsFirst: false });
 
     if (data) {
-      setTasks(data);
+      setTasks(data as Task[]);
     }
     setLoading(false);
   }, [supabase, router]);
@@ -94,14 +94,14 @@ export default function MyTasksPage() {
               {tasks.map((task) => (
                 <tr 
                   key={task.task_id} 
-                  onClick={() => router.push(`/projects/${task.project_id}?task_id=${task.task_id}`)}
+                  onClick={() => task.project_id && router.push(`/projects/${task.project_id}?task_id=${task.task_id}`)}
                   className="hover:bg-slate-50 cursor-pointer transition-colors"
                 >
                   <td className="px-6 py-4">
                     <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold p-1 rounded">課題</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="font-medium text-slate-600">{task.projects?.project_name}</span>
+                    <span className="font-medium text-slate-600">{task.projects?.project_name || '-'}</span>
                   </td>
                   <td className="px-6 py-4 font-semibold text-slate-900">
                     <span className="hover:underline hover:text-indigo-600">{task.task_name}</span>
