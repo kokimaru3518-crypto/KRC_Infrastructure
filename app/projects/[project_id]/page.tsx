@@ -141,41 +141,55 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const doneTasks = tasks.filter(t => t.situation === 'done' || t.situation === 'DONE');
 
   const renderTaskCard = (task: Task) => (
-    <div key={task.task_id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex flex-col gap-3">
-      <div className="text-sm font-semibold text-slate-800 leading-snug break-words group-hover:text-indigo-600 transition-colors">
-        {task.task_name}
-      </div>
-      <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
-        <select
-          value={task.situation || 'waiting'}
-          onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          className="text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600 py-1 px-2 font-medium cursor-pointer hover:bg-slate-100 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
-        >
-          <option value="waiting">TO DO</option>
-          <option value="in_progress">IN PROGRESS</option>
-          <option value="done">DONE</option>
-        </select>
+  <div key={task.task_id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex flex-col gap-3">
+    <div className="text-sm font-semibold text-slate-800 leading-snug break-words group-hover:text-indigo-600 transition-colors">
+      {task.task_name}
+    </div>
+    
+    <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
+      {/* ステータス選択 */}
+      <select
+        value={task.situation || 'waiting'}
+        onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        className="text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600 py-1 px-2 font-medium cursor-pointer hover:bg-slate-100 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
+      >
+        <option value="waiting">TO DO</option>
+        <option value="in_progress">IN PROGRESS</option>
+        <option value="done">DONE</option>
+      </select>
 
-        <div className="flex gap-2 items-center">
-          <div 
-            className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0 ${
-              task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 
-              task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 
-              'bg-gradient-to-br from-indigo-500 to-blue-600'
-            }`}
-          >
-            {task.priority === 2 ? 'High' : task.priority === 1 ? 'Middle' : 'Low'}
-          </div>
-          {task.users?.user_name && (
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`担当者: ${task.users.user_name}`}>
+      <div className="flex flex-col items-end gap-2">
+        {/* 優先度バッジ */}
+        <div 
+          className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0 ${
+            task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 
+            task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 
+            'bg-gradient-to-br from-indigo-500 to-blue-600'
+          }`}
+        >
+          {task.priority === 2 ? 'High' : task.priority === 1 ? 'Middle' : 'Low'}
+        </div>
+
+        {/* ★ アイコンと名前を横並びにするセクション */}
+        {task.users?.user_name ? (
+          <div className="flex items-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-100">
+            {/* アイコン */}
+            <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0 shadow-sm">
               {task.users.user_name.charAt(0).toUpperCase()}
             </div>
-          )}
-        </div>
+            {/* 名前 */}
+            <span className="text-[11px] font-medium text-slate-600 truncate max-w-[80px]">
+              {task.users.user_name}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[10px] text-slate-400 italic">未割り当て</span>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50">

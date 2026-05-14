@@ -11,7 +11,7 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
   const [taskName, setTaskName] = useState('');
   const [assignee, setAssignee] = useState('');
   const [priority, setPriority] = useState<number>(0);
-  const [members, setMembers] = useState<{ user_id: string }[]>([]);
+  const [members, setMembers] = useState<{ user_id: string , users: { user_name: string } | null}[]>([]);
   const [error, setError] = useState('');
   const [isCheckingUser, setIsCheckingUser] = useState(true);
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
 
     const { data } = await supabase
       .from('project_members')
-      .select('user_id, role')
+      .select('user_id, role, users(user_name)')
       .eq('project_id', project_id)
       .neq('role', 'pending');
 
@@ -122,7 +122,9 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
                 >
                   <option value="">未割り当て</option>
                   {members.map(m => (
-                    <option key={m.user_id} value={m.user_id}>{m.user_id}</option>
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.users?.user_name || m.user_id}
+                    </option>
                   ))}
                 </select>
               </div>
