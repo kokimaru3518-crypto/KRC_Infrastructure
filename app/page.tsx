@@ -17,48 +17,45 @@ export default function LoginPage() {
     setError('');
 
     if (!userId || !password) {
-      setError('メールアドレスとパスワードを入力してください');
+      setError('ユーザーIDとパスワードを入力してください');
       return;
     }
 
     if (isLogin) {
-      // Supabase Auth を使用したログイン
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: userId,
-        password: password,
-      });
+      // ログイン処理: usersテーブルの user_name で検索
+      const { data, error: sbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('user_name', userId)
+        .eq('password', password)
+        .single();
 
-      if (authError || !data.user) {
-        console.error('Supabase Auth Error:', authError);
-        setError('ログインに失敗しました。詳細: ' + (authError?.message || 'データなし'));
+      if (sbError || !data) {
+        console.error('Supabase Error:', sbError);
+        setError('ログインに失敗しました。ユーザーIDまたはパスワードが間違っています。詳細: ' + (sbError?.message || 'データなし'));
       } else {
-        // 今まで通り互換性のため userId(メールアドレス)を保存
-        localStorage.setItem('krc_user_id', userId);
+        // localStorageには user_name を保存（他の画面で表示やキーとして使うため）
+        localStorage.setItem('krc_user_id', data.user_name);
         router.push('/projects');
       }
     } else {
-      // Supabase Auth を使用したサインアップ
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: userId,
-        password: password,
-      });
-
-      if (authError || !data.user) {
-        setError('登録に失敗しました: ' + authError?.message);
-        return;
-      }
-
-      // オプション: 既存の users テーブルにも登録しておく (RLSで弾かれる可能性がある場合は無視するか要調整ですが互換性のために残します)
-      await supabase
+      // 登録処理: user_idはUUIDを生成、user_nameに入力されたメール(またはID)を登録
+      const newUserId = crypto.randomUUID();
+      const { error: sbError } = await supabase
         .from('users')
         .insert({
-          user_id: data.user.id,
+          user_id: newUserId,
           password: password,
           user_name: userId,
-        });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
 
-      localStorage.setItem('krc_user_id', userId);
-      router.push('/projects');
+      if (sbError) {
+        setError('登録に失敗しました: ' + sbError.message);
+      } else {
+        localStorage.setItem('krc_user_id', userId);
+        router.push('/projects');
+      }
     }
   };
 
@@ -84,13 +81,13 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-16">
           <div>
-            <label className="block text-2xl font-bold text-[#5E6C84] mb-6">Email Address</label>
+            <label className="block text-2xl font-bold text-[#5E6C84] mb-6">User ID</label>
             <input
-              type="email"
+              type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className="w-full px-10 py-16 border-2 border-[#DFE1E6] rounded-2xl bg-[#FAFBFC] focus:bg-white focus:border-[#4C9AFF] focus:ring-4 focus:ring-[#4C9AFF]/20 transition-all outline-none text-4xl text-[#172B4D] shadow-sm hover:bg-gray-50"
-              placeholder="Enter your email address"
+              placeholder="Enter your user ID"
               required
             />
           </div>

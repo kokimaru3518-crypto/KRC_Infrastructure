@@ -34,6 +34,29 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const supabase = useMemo(() => createClient(), []);
 
   const fetchProjectData = useCallback(async (currentUserId: string) => {
+    // まずメンバーかどうかを確認する
+    const { data: mData, error: mError } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('project_id', project_id);
+    if (mError) {
+      setError(mError.message);
+      return;
+    }
+
+    const currentUserRole = mData?.find(m => m.user_id === currentUserId)?.role;
+    const isMember = !!currentUserRole && currentUserRole !== 'pending';
+
+    // 参加していない（または申請中）ユーザーはプロジェクト一覧へ戻す
+    if (!isMember) {
+      router.push('/projects');
+      return;
+    }
+
+    setMembers(mData || []);
+    setIsLeader(currentUserRole === 'leader');
+
+    // メンバーであることが確認できた場合のみプロジェクト情報とタスクを取得
     const { data: pData, error: pError } = await supabase
       .from('projects')
       .select('*')
@@ -42,17 +65,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     if (pError) setError(pError.message);
     else setProject(pData);
 
-    const { data: mData, error: mError } = await supabase
-      .from('project_members')
-      .select('*')
-      .eq('project_id', project_id);
-    if (mError) setError(mError.message);
-    else {
-      setMembers(mData || []);
-      const currentUserRole = mData?.find(m => m.user_id === currentUserId)?.role;
-      setIsLeader(currentUserRole === 'leader');
-    }
-
     const { data: tData, error: tError } = await supabase
       .from('tasks')
       .select('*')
@@ -60,7 +72,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .order('created_at', { ascending: false });
     if (tError) setError(tError.message);
     else setTasks(tData || []);
-  }, [project_id, supabase]);
+  }, [project_id, supabase, router]);
 
   const initialized = useRef(false);
   useEffect(() => {
