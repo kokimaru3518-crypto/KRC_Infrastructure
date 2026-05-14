@@ -12,17 +12,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const pathname = usePathname();
 
+  // セッション状態の監視
+  const refreshSession = async () => {
+    const s = await getSession();
+    setSession(s);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    getSession().then((s) => {
-      setSession(s);
-      setLoading(false);
-    });
+    void refreshSession();
   }, [pathname]);
 
+  // ログアウト処理
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setSession(null);
-    router.push('/');
+    try {
+      // サーバー側のセッションを破棄
+      await fetch('/api/auth/logout', { method: 'POST' });
+      
+      // クライアント側の状態を即座にクリア
+      setSession(null);
+      
+      // ログイン画面（トップ）へ強制的に移動し、ページをリフレッシュ
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // エラー時でも強制移動
+      window.location.href = '/';
+    }
   };
 
   const navItems = [
@@ -44,15 +60,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {session && (
               <div className="flex items-center gap-4">
                 <div className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">{session.user_name}</div>
-                <button onClick={handleLogout} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg></button>
+                <button 
+                  onClick={handleLogout} 
+                  className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all flex items-center gap-2 font-bold text-xs"
+                  title="ログアウト"
+                >
+                  <span className="hidden sm:inline">Logout</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
               </div>
             )}
           </header>
 
           <div className="flex flex-1 pt-16">
-            {/* Sidebar (Always present if logged in) */}
+            {/* Sidebar */}
             {session && (
-              <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-[calc(100vh-4rem)] z-30 transition-all">
+              <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-[calc(100vh-4rem)] z-30 transition-all shadow-sm">
                 <div className="p-4 space-y-1">
                   {navItems.map((item) => (
                     <Link
@@ -72,7 +95,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Page Content */}
             <main className={`flex-1 w-full overflow-y-auto ${session ? 'md:ml-64' : ''}`}>
-              {loading ? <div className="p-20 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Loading...</div> : children}
+              {loading ? (
+                <div className="p-20 text-center font-black text-slate-300 animate-pulse uppercase tracking-[0.3em]">Authenticating...</div>
+              ) : children}
             </main>
           </div>
         </div>

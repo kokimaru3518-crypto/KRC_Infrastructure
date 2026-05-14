@@ -79,6 +79,7 @@ export type Database = {
           task_name: string
           user_id: string | null
           due_date: string | null
+          text: string | null
         }
         Insert: {
           created_at?: string | null
@@ -90,6 +91,7 @@ export type Database = {
           task_name: string
           user_id?: string | null
           due_date?: string | null
+          text?: string | null
         }
         Update: {
           created_at?: string | null
@@ -101,6 +103,7 @@ export type Database = {
           task_name?: string
           user_id?: string | null
           due_date?: string | null
+          text?: string | null
         }
         Relationships: [
           {
