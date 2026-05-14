@@ -10,6 +10,12 @@ type Project = {
   project_name: string;
   text: string | null;
   created_at: string | null;
+  project_members?: {
+    role: string;
+    users: {
+      user_name: string;
+    };
+  }[];
 };
 
 export default function ProjectsPage() {
@@ -21,12 +27,19 @@ export default function ProjectsPage() {
   const fetchProjects = useCallback(async () => {
     const { data, error: sbError } = await supabase
       .from('projects')
-      .select('*')
+      .select(`
+        *,
+        project_members(
+          role,
+          users(user_name)
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (sbError) {
       setError(sbError.message);
     } else {
+      // Leader を見つけてデータを整形
       setProjects(data || []);
     }
   }, [supabase]);
@@ -155,6 +168,16 @@ export default function ProjectsPage() {
                 <p className="text-sm text-slate-500 line-clamp-2 mb-6 min-h-[2.5rem]">
                   {project.text || <span className="italic opacity-70">説明がありません</span>}
                 </p>
+                
+                {/* Author Display */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    作成者: <span className="text-slate-900">{project.project_members?.find(m => m.role === 'leader')?.users?.user_name || '不明'}</span>
+                  </span>
+                </div>
                 
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
                   <div className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
