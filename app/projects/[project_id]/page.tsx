@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, use } from 'react';
 import { createClient } from '../../../supabase/client';
-import { getSession, type Session } from '../../../lib/session';
+import { getSession } from '../../../lib/session';
 import Link from 'next/link';
 
 type Task = {
@@ -35,16 +35,16 @@ type Member = {
   } | null;
 };
 
-const priorityMap: { [key: number]: { label: string, color: string } } = {
-  2: { label: 'High', color: 'text-red-600 bg-red-50 border-red-100' },
-  1: { label: 'Middle', color: 'text-amber-600 bg-amber-50 border-amber-100' },
-  0: { label: 'Low', color: 'text-slate-600 bg-slate-50 border-slate-100' },
+const priorityMap: { [key: number]: { label: string, color: string, icon: string } } = {
+  2: { label: '高', color: 'text-red-700 bg-red-50', icon: '↑' },
+  1: { label: '中', color: 'text-amber-700 bg-amber-50', icon: '=' },
+  0: { label: '低', color: 'text-blue-700 bg-blue-50', icon: '↓' },
 };
 
 const columns = [
-  { id: 'waiting', name: 'Waiting', color: 'bg-slate-100 text-slate-600 border-slate-200' },
-  { id: 'working', name: 'In Progress', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-  { id: 'done', name: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+  { id: 'waiting', name: '未着手', color: 'bg-slate-100 text-slate-600' },
+  { id: 'working', name: '進行中', color: 'bg-slate-100 text-slate-600' },
+  { id: 'done', name: '完了', color: 'bg-slate-100 text-slate-600' },
 ];
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ project_id: string }> }) {
@@ -120,42 +120,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     setIsAddingSubtask(false);
   };
 
-  // --- Drag and Drop Handlers ---
-  const handleDragStart = (taskId: string) => {
-    if (isLeaderOrAdmin) setDraggedTaskId(taskId);
-  };
-
-  const handleDragOver = (e: React.DragEvent, colId: string) => {
-    if (isLeaderOrAdmin) {
-      e.preventDefault();
-      setDropTargetColumn(colId);
-    }
-  };
-
+  const handleDragStart = (taskId: string) => { if (isLeaderOrAdmin) setDraggedTaskId(taskId); };
+  const handleDragOver = (e: React.DragEvent, colId: string) => { if (isLeaderOrAdmin) { e.preventDefault(); setDropTargetColumn(colId); } };
   const handleDrop = async (colId: string) => {
-    if (isLeaderOrAdmin && draggedTaskId) {
-      await updateTask(draggedTaskId, { situation: colId });
-    }
-    setDraggedTaskId(null);
-    setDropTargetColumn(null);
+    if (isLeaderOrAdmin && draggedTaskId) await updateTask(draggedTaskId, { situation: colId });
+    setDraggedTaskId(null); setDropTargetColumn(null);
   };
-  // ------------------------------
 
   const jumpToTask = (taskId: string) => { setActiveTab('board'); setSelectedTaskId(taskId); };
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return new Date(dateStr).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' });
   };
 
   const getRemainingDaysInfo = (dateStr: string | null) => {
     if (!dateStr) return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const target = new Date(dateStr); target.setHours(0, 0, 0, 0);
-    const diffTime = target.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return { label: 'Today', sub: 'Status', color: 'text-red-500', bg: 'bg-red-50' };
-    if (diffDays < 0) return { label: `${Math.abs(diffDays)}d`, sub: 'Expired', color: 'text-slate-400', bg: 'bg-slate-100' };
-    return { label: `${diffDays}`, sub: 'Days', color: diffDays <= 3 ? 'text-orange-500' : 'text-indigo-400', bg: diffDays <= 3 ? 'bg-orange-50' : 'bg-indigo-50/10' };
+    const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return { label: '今日まで', color: 'text-white bg-red-600' };
+    if (diffDays < 0) return { label: '期限切れ', color: 'text-white bg-slate-400' };
+    return { label: `あと ${diffDays} 日`, color: diffDays <= 3 ? 'text-amber-700 bg-amber-100' : 'text-slate-600 bg-slate-100' };
   };
 
   const stats = useMemo(() => {
@@ -164,81 +149,125 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     const working = allTasks.filter(t => t.situation === 'working').length;
     const waiting = allTasks.filter(t => t.situation === 'waiting' || !t.situation).length;
     const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-    const doneP = total > 0 ? (done / total) * 100 : 0;
-    const workingP = total > 0 ? (working / total) * 100 : 0;
-    const waitingP = total > 0 ? (waiting / total) * 100 : 0;
     const upcoming = allTasks.filter(t => t.due_date && t.situation !== 'done').sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime()).slice(0, 5);
     const memberStats = members.map(m => ({ ...m, taskCount: allTasks.filter(t => t.user_id === m.user_id).length }));
-    return { total, done, working, waiting, progress, doneP, workingP, waitingP, upcoming, memberStats };
+    return { total, done, working, waiting, progress, upcoming, memberStats, doneP: (done/total)*100, workingP: (working/total)*100, waitingP: (waiting/total)*100 };
   }, [allTasks, members]);
 
-  if (loading) return <div className="p-20 text-center font-black text-slate-300 animate-pulse uppercase tracking-widest">Accessing...</div>;
+  if (loading) return <div className="p-20 text-center font-medium text-slate-400 tracking-widest animate-pulse italic">読み込み中...</div>;
   if (!project) return null;
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto min-h-full">
-      {/* Header */}
-      <div className="mb-6 flex justify-between items-end">
-        <div>
-          <div className="flex items-center gap-4 mb-2"><h1 className="text-4xl font-black text-slate-900 tracking-tight italic">{project.project_name}</h1><div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">Active</div></div>
-          <p className="text-slate-500 font-medium">{project.text}</p>
+    <div className="max-w-full px-6 py-6">
+      {/* Jira Style Breadcrumbs & Header */}
+      <div className="mb-6">
+        <nav className="text-xs text-slate-500 mb-2 flex items-center gap-2">
+          <Link href="/projects" className="hover:underline">プロジェクト</Link>
+          <span>/</span>
+          <span>{project.project_name}</span>
+        </nav>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold text-slate-900">{project.project_name}</h1>
+          {isLeaderOrAdmin && (
+            <Link href={`/projects/${project_id}/tasks/new`} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-medium text-sm transition-colors shadow-sm">
+              課題を作成
+            </Link>
+          )}
         </div>
-        {isLeaderOrAdmin && <Link href={`/projects/${project_id}/tasks/new`} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-black shadow-xl transition-all active:scale-95 uppercase text-xs tracking-widest">Add Task</Link>}
       </div>
 
-      <div className="flex gap-1 mb-8 border-b border-slate-200">
-        <button onClick={() => setActiveTab('board')} className={`px-8 py-4 text-sm font-black uppercase tracking-widest border-b-4 ${activeTab === 'board' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Board</button>
-        <button onClick={() => setActiveTab('summary')} className={`px-8 py-4 text-sm font-black uppercase tracking-widest border-b-4 ${activeTab === 'summary' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Summary</button>
+      {/* Tabs */}
+      <div className="flex gap-6 mb-6 border-b border-slate-200">
+        <button onClick={() => setActiveTab('board')} className={`pb-3 text-sm font-medium transition-all relative ${activeTab === 'board' ? 'text-indigo-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>カンバンボード</button>
+        <button onClick={() => setActiveTab('summary')} className={`pb-3 text-sm font-medium transition-all relative ${activeTab === 'summary' ? 'text-indigo-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>概要</button>
       </div>
 
       {activeTab === 'board' ? (
-        <>
-          <div className="mb-8 p-5 bg-white border border-slate-200 rounded-3xl flex flex-wrap gap-8 items-center shadow-sm">
-            <div className="flex items-center gap-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assignee</label><select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="text-sm font-bold bg-slate-50 border-none rounded-xl px-4 py-2 outline-none">{members.map(m => <option key={m.user_id} value={m.users?.user_name || ''}>{m.users?.user_name}</option>)}<option value="all">All Members</option><option value="none">Unassigned</option></select></div>
-            <div className="flex items-center gap-3"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</label><select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="text-sm font-bold bg-slate-50 border-none rounded-xl px-4 py-2 outline-none"><option value="all">All Levels</option><option value="2">High</option><option value="1">Middle</option><option value="0">Low</option></select></div>
+        <div className="animate-in fade-in duration-300">
+          {/* Filters Bar */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center">
+              <input type="text" placeholder="ボードを検索" className="bg-slate-50 border border-slate-300 rounded px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-64" />
+            </div>
+            <div className="flex -space-x-2 mr-2">
+              {members.slice(0, 5).map(m => (
+                <div key={m.user_id} className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600 cursor-help" title={m.users?.user_name || ''}>
+                  {m.users?.user_name?.charAt(0).toUpperCase()}
+                </div>
+              ))}
+            </div>
+            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="bg-slate-100 border-none rounded px-3 py-1.5 text-sm font-medium text-slate-600 outline-none hover:bg-slate-200 cursor-pointer">
+              <option value="all">すべての優先度</option><option value="2">高</option><option value="1">中</option><option value="0">低</option>
+            </select>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+
+          {/* Kanban Board */}
+          <div className="flex gap-4 items-start overflow-x-auto pb-4">
             {columns.map((col) => (
-              <div key={col.id} className="flex flex-col min-h-[600px]" onDragOver={(e) => handleDragOver(e, col.id)} onDrop={() => handleDrop(col.id)}>
-                <div className={`p-5 rounded-t-3xl border-x border-t flex justify-between items-center ${dropTargetColumn === col.id ? 'bg-indigo-100' : col.color}`}><h2 className="font-black text-xs uppercase tracking-widest">{col.name}</h2><span className="bg-white/50 px-2.5 py-1 rounded-lg text-[10px] font-black">{parentTasks.filter(t => (t.situation || 'waiting') === col.id).length}</span></div>
-                <div className={`flex-1 p-5 border-x border-b border-slate-200 rounded-b-3xl space-y-5 ${dropTargetColumn === col.id ? 'bg-indigo-50/30' : 'bg-slate-50/50'}`}>
+              <div key={col.id} className={`flex flex-col w-80 min-h-[70vh] bg-slate-50/80 rounded-md transition-colors ${dropTargetColumn === col.id ? 'bg-indigo-50' : ''}`} onDragOver={(e) => handleDragOver(e, col.id)} onDrop={() => handleDrop(col.id)}>
+                <div className="p-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  {col.name} <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px]">{parentTasks.filter(t => (t.situation || 'waiting') === col.id).length}</span>
+                </div>
+                <div className="flex-1 p-2 space-y-2">
                   {parentTasks.filter(t => (t.situation || 'waiting') === col.id).map((task) => (
-                    <div key={task.task_id} draggable={isLeaderOrAdmin} onDragStart={() => handleDragStart(task.task_id)} onClick={() => setSelectedTaskId(task.task_id)} className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all group ${isLeaderOrAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}>
-                      <div className="flex justify-between items-start mb-4"><span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border uppercase ${priorityMap[task.priority ?? 0]?.color}`}>{priorityMap[task.priority ?? 0]?.label}</span>{getSubtasks(task.task_id).length > 0 && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg">SUB: {getSubtasks(task.task_id).length}</span>}</div>
-                      <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors text-lg mb-4">{task.task_name}</h3>
-                      <div className="space-y-2 mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] font-bold flex justify-between"><span>Due:</span><span className={task.due_date ? 'text-indigo-600' : 'text-slate-300'}>{formatDate(task.due_date)}</span></div>
-                      <div className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black border border-slate-200 text-slate-500">{task.users?.user_name?.charAt(0).toUpperCase() || '?'}</div><span className="text-xs font-bold text-slate-500">{task.users?.user_name || 'Unassigned'}</span></div>
+                    <div key={task.task_id} draggable={isLeaderOrAdmin} onDragStart={() => handleDragStart(task.task_id)} onClick={() => setSelectedTaskId(task.task_id)} className="bg-white p-3 rounded shadow-sm border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors group">
+                      <h3 className="text-sm text-slate-800 mb-3 line-clamp-2">{task.task_name}</h3>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded ${priorityMap[task.priority ?? 0]?.color}`} title={priorityMap[task.priority ?? 0]?.label}>
+                            {priorityMap[task.priority ?? 0]?.icon}
+                          </span>
+                          {task.due_date && <span className="text-[10px] text-slate-400 font-medium">{formatDate(task.due_date)}</span>}
+                        </div>
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">
+                          {task.users?.user_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       ) : (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white p-12 rounded-[3rem] border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-10 uppercase tracking-widest">Task Status Overview</h3>
-              <div className="flex flex-col md:flex-row items-center justify-around gap-12">
-                <div className="relative w-64 h-64"><svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90"><circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="3"></circle><circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" strokeWidth="3.5" strokeDasharray={`${stats.doneP} ${100 - stats.doneP}`} strokeDashoffset="0"></circle><circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#0ea5e9" strokeWidth="3.5" strokeDasharray={`${stats.workingP} ${100 - stats.workingP}`} strokeDashoffset={`-${stats.doneP}`}></circle><circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#94a3b8" strokeWidth="3.5" strokeDasharray={`${stats.waitingP} ${100 - stats.waitingP}`} strokeDashoffset={`-${stats.doneP + stats.workingP}`}></circle></svg><div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-4xl font-black text-slate-900 leading-none">{stats.progress}%</span><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Complete</span></div></div>
-                <div className="flex-1 space-y-6 w-full max-w-xs"><div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100"><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-sm font-black text-emerald-800 uppercase">Completed</span></div><span className="text-2xl font-black text-emerald-600">{stats.done}</span></div><div className="flex items-center justify-between p-4 bg-sky-50 rounded-2xl border border-sky-100"><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-sky-500" /><span className="text-sm font-black text-sky-800 uppercase">Working</span></div><span className="text-2xl font-black text-sky-600">{stats.working}</span></div><div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-slate-400" /><span className="text-sm font-black text-slate-600 uppercase">Waiting</span></div><span className="text-2xl font-black text-slate-600">{stats.waiting}</span></div></div>
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white p-8 rounded-lg border border-slate-200">
+              <h3 className="text-sm font-bold text-slate-500 uppercase mb-6">ステータス概要</h3>
+              <div className="flex flex-col md:flex-row items-center justify-around gap-8">
+                <div className="relative w-48 h-48">
+                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4"></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#36B37E" strokeWidth="4" strokeDasharray={`${stats.doneP} ${100 - stats.doneP}`} strokeDashoffset="0"></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#0052CC" strokeWidth="4" strokeDasharray={`${stats.workingP} ${100 - stats.workingP}`} strokeDashoffset={`-${stats.doneP}`}></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#FFAB00" strokeWidth="4" strokeDasharray={`${stats.waitingP} ${100 - stats.waitingP}`} strokeDashoffset={`-${stats.doneP + stats.workingP}`}></circle>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-3xl font-bold text-slate-800">{stats.progress}%</span><span className="text-[10px] font-bold text-slate-400 uppercase">完了</span></div>
+                </div>
+                <div className="flex-1 max-w-xs space-y-3">
+                  {columns.map(c => {
+                    const count = allTasks.filter(t => (t.situation || 'waiting') === c.id).length;
+                    return (
+                      <div key={c.id} className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-xs font-semibold text-slate-600">{c.name}</span>
+                        <span className="text-lg font-bold text-slate-800">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl overflow-hidden">
-              <h3 className="text-xl font-black mb-8 uppercase tracking-widest text-indigo-400">Upcoming Deadlines</h3>
-              <div className="space-y-4">
+            <div className="bg-slate-900 p-8 rounded-lg text-white">
+              <h3 className="text-sm font-bold text-indigo-400 uppercase mb-6">直近の期限</h3>
+              <div className="space-y-3">
                 {stats.upcoming.map(t => {
                   const rem = getRemainingDaysInfo(t.due_date);
                   return (
-                    <div key={t.task_id} onDoubleClick={() => jumpToTask(t.task_id)} className="p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 hover:border-indigo-500 transition-all cursor-pointer group flex justify-between items-center">
-                      <div className="flex-1">
-                        <p className="text-[10px] font-black text-white/30 uppercase mb-2">{formatDate(t.due_date)}</p>
-                        <p className="font-bold text-sm line-clamp-1 group-hover:text-indigo-400">{t.task_name}</p>
-                      </div>
-                      <div className={`ml-4 w-20 h-20 rounded-2xl flex flex-col items-center justify-center text-center ${rem?.bg || 'bg-white/10'}`}>
-                        <span className={`text-2xl font-black leading-none mb-1 ${rem?.color || 'text-white'}`}>{rem?.label || '-'}</span>
-                        <span className="text-[8px] font-black uppercase tracking-[0.1em] opacity-60">{rem?.sub || ''}</span>
+                    <div key={t.task_id} onDoubleClick={() => jumpToTask(t.task_id)} className="p-4 bg-white/5 border border-white/10 rounded hover:bg-white/10 transition-all cursor-pointer flex justify-between items-center">
+                      <div className="overflow-hidden mr-4"><p className="text-[10px] text-white/40 mb-1">{formatDate(t.due_date)}</p><p className="text-sm font-medium truncate">{t.task_name}</p></div>
+                      <div className={`shrink-0 px-2 py-1 rounded text-[10px] font-bold ${rem?.color}`}>
+                        {rem?.label}
                       </div>
                     </div>
                   );
@@ -246,38 +275,60 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
               </div>
             </div>
           </div>
-          <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-sm"><div className="flex items-center justify-between mb-10"><h3 className="text-xl font-black text-slate-900 uppercase tracking-widest">Project Members</h3><span className="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">{members.length} Members</span></div><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100"><th className="px-6 py-5">Name</th><th className="px-6 py-5">Role</th><th className="px-6 py-5">Assigned Tasks</th></tr></thead><tbody className="divide-y divide-slate-50">{stats.memberStats.map((m) => (<tr key={m.user_id} className="group hover:bg-slate-50/50"><td className="px-6 py-6"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-sm">{m.users?.user_name?.charAt(0).toUpperCase()}</div><span className="font-bold text-slate-900">{m.users?.user_name}</span></div></td><td className="px-6 py-6"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${m.role === 'leader' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{m.role}</span></td><td className="px-6 py-6"><div className="flex items-center gap-3"><span className="text-lg font-black text-slate-900">{m.taskCount}</span><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tasks</span></div></td></tr>))}</tbody></table></div></div>
+
+          <div className="bg-white p-8 rounded-lg border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-500 uppercase mb-6">チームメンバー</h3>
+            <table className="w-full text-left">
+              <thead><tr className="text-[11px] text-slate-400 uppercase border-b border-slate-100"><th className="px-4 py-3">メンバー</th><th className="px-4 py-3">役割</th><th className="px-4 py-3">担当課題数</th></tr></thead>
+              <tbody className="divide-y divide-slate-50">{stats.memberStats.map(m => (
+                <tr key={m.user_id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-4 flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">{m.users?.user_name?.charAt(0).toUpperCase()}</div><span className="text-sm font-medium">{m.users?.user_name}</span></td>
+                  <td className="px-4 py-4"><span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${m.role === 'leader' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>{m.role === 'leader' ? 'リーダー' : 'メンバー'}</span></td>
+                  <td className="px-4 py-4 font-bold text-slate-700">{m.taskCount}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Detailed Modal */}
+      {/* Modal */}
       {selectedTaskId && selectedTask && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-6" onClick={() => setSelectedTaskId(null)}>
-          <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-            <div className="p-12">
-              <div className="flex justify-between items-start mb-8">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-4 mb-4">
-                    <select disabled={!isLeaderOrAdmin} value={selectedTask.priority ?? 0} onChange={(e) => updateTask(selectedTask.task_id, { priority: parseInt(e.target.value) })} className={`text-[11px] font-black px-3 py-1.5 rounded-xl border uppercase outline-none ${priorityMap[selectedTask.priority ?? 0]?.color}`}>
-                      <option value="2">High</option><option value="1">Middle</option><option value="0">Low</option>
-                    </select>
-                    <select disabled={!isLeaderOrAdmin} value={selectedTask.situation || 'waiting'} onChange={(e) => updateTask(selectedTask.task_id, { situation: e.target.value })} className="text-[11px] font-black bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl border border-slate-200 uppercase outline-none">
-                      <option value="waiting">Waiting</option><option value="working">In Progress</option><option value="done">Done</option>
-                    </select>
-                    <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Due</span>
-                      <input disabled={!isLeaderOrAdmin} type="date" value={selectedTask.due_date ? selectedTask.due_date.split('T')[0] : ''} onChange={(e) => updateTask(selectedTask.task_id, { due_date: e.target.value || null })} className="text-[11px] font-bold bg-transparent text-indigo-700 outline-none" />
-                    </div>
-                  </div>
-                  <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-4">{selectedTask.task_name}</h2>
-                  <div className="mt-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
-                    <textarea disabled={!isLeaderOrAdmin} value={selectedTask.text || ''} onChange={(e) => updateTask(selectedTask.task_id, { text: e.target.value || null })} placeholder={isLeaderOrAdmin ? "詳細な説明を入力..." : "説明はありません"} rows={3} className={`w-full p-4 border-none rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-100 outline-none transition-all resize-none ${isLeaderOrAdmin ? 'bg-slate-50 text-slate-700' : 'bg-transparent text-slate-500'}`} />
-                  </div>
-                </div>
-                <button onClick={() => setSelectedTaskId(null)} className="p-4 hover:bg-slate-100 rounded-3xl text-slate-300 hover:text-slate-900 transition-colors"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-10" onClick={() => setSelectedTaskId(null)}>
+          <div className="bg-white w-full max-w-5xl h-full max-h-[90vh] rounded shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="bg-indigo-100 text-indigo-700 p-1 rounded font-bold">課題</span>
+                <span>{project.project_name}</span> / <span>{selectedTask.task_id.slice(0, 8).toUpperCase()}</span>
               </div>
-              <div className="mt-10 bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden"><div className="p-6 bg-white border-b border-slate-100 flex justify-between items-center"><h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Subtasks</h3>{isLeaderOrAdmin && (<form onSubmit={handleAddSubtask} className="flex gap-2"><input type="text" value={newSubtaskName} onChange={e => setNewSubtaskName(e.target.value)} placeholder="Quick add..." className="px-4 py-2 bg-slate-50 rounded-xl text-sm font-bold border-none outline-none focus:ring-2 focus:ring-indigo-100" /><button type="submit" disabled={isAddingSubtask} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-800">Add</button></form>)}</div><div className="max-h-60 overflow-y-auto"><table className="w-full text-left"><thead className="bg-slate-50/50 sticky top-0"><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">Status</th><th className="px-6 py-4">Task Name</th><th className="px-6 py-4">Assignee</th><th className="px-6 py-4">Priority</th></tr></thead><tbody className="divide-y divide-slate-100">{getSubtasks(selectedTask.task_id).map(sub => (<tr key={sub.task_id} className="bg-white hover:bg-slate-50/30 transition-colors"><td className="px-6 py-3"><select disabled={!isLeaderOrAdmin} value={sub.situation || 'waiting'} onChange={(e) => updateTask(sub.task_id, { situation: e.target.value })} className="text-[10px] font-bold border border-slate-200 rounded-lg px-2 py-1 outline-none"><option value="waiting">Waiting</option><option value="working">In Progress</option><option value="done">Done</option></select></td><td className="px-6 py-3 font-bold text-slate-700 text-sm">{sub.task_name}</td><td className="px-6 py-3"><select disabled={!isLeaderOrAdmin} value={sub.user_id || ''} onChange={(e) => updateTask(sub.task_id, { user_id: e.target.value || null })} className="text-[10px] font-bold border border-slate-200 rounded-lg px-2 py-1 outline-none">{members.map(m => <option key={m.user_id} value={m.user_id}>{m.users?.user_name}</option>)}<option value="">Unassigned</option></select></td><td className="px-6 py-3"><select disabled={!isLeaderOrAdmin} value={sub.priority ?? 0} onChange={(e) => updateTask(sub.task_id, { priority: parseInt(e.target.value) })} className={`text-[10px] font-black border rounded-lg px-2 py-1 outline-none ${priorityMap[sub.priority ?? 0]?.color}`}><option value="2">High</option><option value="1">Middle</option><option value="0">Low</option></select></td></tr>))}</tbody></table></div></div>
+              <button onClick={() => setSelectedTaskId(null)} className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-500"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 p-8 overflow-y-auto">
+                <h2 className="text-2xl font-semibold text-slate-900 mb-8">{selectedTask.task_name}</h2>
+                <div className="mb-8">
+                  <label className="text-xs font-bold text-slate-500 uppercase block mb-2">説明</label>
+                  <textarea disabled={!isLeaderOrAdmin} value={selectedTask.text || ''} onChange={(e) => updateTask(selectedTask.task_id, { text: e.target.value || null })} placeholder={isLeaderOrAdmin ? "説明を追加..." : ""} rows={6} className={`w-full p-3 rounded border border-transparent text-sm transition-all resize-none ${isLeaderOrAdmin ? 'hover:bg-slate-50 focus:bg-white focus:border-indigo-500' : 'bg-transparent cursor-default'}`} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">子タスク</h3>
+                  {isLeaderOrAdmin && (
+                    <form onSubmit={handleAddSubtask} className="flex gap-2 mb-4">
+                      <input type="text" value={newSubtaskName} onChange={e => setNewSubtaskName(e.target.value)} placeholder="何を行う必要がありますか？" className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm outline-none focus:border-indigo-500" />
+                      <button type="submit" disabled={isAddingSubtask} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded text-sm font-bold transition-colors">追加</button>
+                    </form>
+                  )}
+                  <div className="border border-slate-200 rounded overflow-hidden"><table className="w-full text-left text-sm"><thead className="bg-slate-50 border-b border-slate-200"><tr className="text-[10px] text-slate-500 uppercase font-bold"><th className="px-4 py-2">ステータス</th><th className="px-4 py-2">概要</th><th className="px-4 py-2">担当者</th></tr></thead><tbody className="divide-y divide-slate-100">{getSubtasks(selectedTask.task_id).map(sub => (<tr key={sub.task_id} className="hover:bg-slate-50"><td className="px-4 py-2"><select disabled={!isLeaderOrAdmin} value={sub.situation || 'waiting'} onChange={(e) => updateTask(sub.task_id, { situation: e.target.value })} className="bg-slate-100 text-[10px] font-bold px-2 py-1 rounded border-none outline-none"><option value="waiting">未着手</option><option value="working">進行中</option><option value="done">完了</option></select></td><td className="px-4 py-2 font-medium">{sub.task_name}</td><td className="px-4 py-2"><select disabled={!isLeaderOrAdmin} value={sub.user_id || ''} onChange={(e) => updateTask(sub.task_id, { user_id: e.target.value || null })} className="bg-transparent text-[10px] border-none outline-none">{members.map(m => <option key={m.user_id} value={m.user_id}>{m.users?.user_name}</option>)}<option value="">未割り当て</option></select></td></tr>))}</tbody></table></div>
+                </div>
+              </div>
+              <div className="w-80 p-8 border-l border-slate-200 bg-slate-50/30 overflow-y-auto">
+                <div className="space-y-6">
+                  <div><label className="text-[11px] font-bold text-slate-500 uppercase block mb-2">ステータス</label><select disabled={!isLeaderOrAdmin} value={selectedTask.situation || 'waiting'} onChange={(e) => updateTask(selectedTask.task_id, { situation: e.target.value })} className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500"><option value="waiting">未着手</option><option value="working">進行中</option><option value="done">完了</option></select></div>
+                  <div><label className="text-[11px] font-bold text-slate-500 uppercase block mb-2">担当者</label><select disabled={!isLeaderOrAdmin} value={selectedTask.user_id || ''} onChange={(e) => updateTask(selectedTask.task_id, { user_id: e.target.value || null })} className="w-full bg-transparent hover:bg-slate-100 border-none rounded px-3 py-2 text-sm outline-none"><option value="">未割り当て</option>{members.map(m => <option key={m.user_id} value={m.user_id}>{m.users?.user_name}</option>)}</select></div>
+                  <div><label className="text-[11px] font-bold text-slate-500 uppercase block mb-2">優先度</label><select disabled={!isLeaderOrAdmin} value={selectedTask.priority ?? 0} onChange={(e) => updateTask(selectedTask.task_id, { priority: parseInt(e.target.value) })} className="w-full bg-transparent hover:bg-slate-100 border-none rounded px-3 py-2 text-sm outline-none"><option value="2">高</option><option value="1">中</option><option value="0">低</option></select></div>
+                  <div><label className="text-[11px] font-bold text-slate-500 uppercase block mb-2">期限日</label><input disabled={!isLeaderOrAdmin} type="date" value={selectedTask.due_date ? selectedTask.due_date.split('T')[0] : ''} onChange={(e) => updateTask(selectedTask.task_id, { due_date: e.target.value || null })} className="w-full bg-transparent hover:bg-slate-100 border-none rounded px-3 py-2 text-sm outline-none" /></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
