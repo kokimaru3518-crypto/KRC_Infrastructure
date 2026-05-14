@@ -31,7 +31,8 @@ export default function LoginPage() {
         .single();
 
       if (sbError || !data) {
-        setError('ログインに失敗しました。ユーザーIDまたはパスワードが間違っています。');
+        console.error('Supabase Error:', sbError);
+        setError('ログインに失敗しました。ユーザーIDまたはパスワードが間違っています。詳細: ' + (sbError?.message || 'データなし'));
       } else {
         // localStorageには user_name を保存（他の画面で表示やキーとして使うため）
         localStorage.setItem('krc_user_id', data.user_name);
