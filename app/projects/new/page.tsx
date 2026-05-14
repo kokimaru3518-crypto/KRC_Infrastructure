@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function NewProjectPage() {
   const [projectName, setProjectName] = useState('');
   const [text, setText] = useState('');
-  const [initialMembers, setInitialMembers] = useState(''); // カンマ区切りのuser_idを想定
+  const [initialMembers, setInitialMembers] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -20,7 +20,6 @@ export default function NewProjectPage() {
       router.push('/');
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserId(uid);
   }, [router]);
 
@@ -28,9 +27,6 @@ export default function NewProjectPage() {
     e.preventDefault();
     if (!userId) return;
 
-    // 1. projectsテーブルに登録 (project_idとcreated_atはDB側で自動生成を想定)
-    // ただしschema定義を見ると project_id に DEFAULT が無い場合がある。UUID生成が必要かも。
-    // supabase/client経由でuuidを生成して入れる。
     const newProjectId = crypto.randomUUID();
 
     const { error: projectError } = await supabase
@@ -42,16 +38,14 @@ export default function NewProjectPage() {
       });
 
     if (projectError) {
-      setError('プロジェクト作成に失敗しました: ' + projectError.message);
+      setError('Failed to create project: ' + projectError.message);
       return;
     }
 
-    // 2. 作成者をproject_membersに登録 (role = 'leader')
     const membersToInsert = [
       { project_id: newProjectId, user_id: userId, role: 'leader' }
     ];
 
-    // 初期メンバーが入力されている場合追加
     if (initialMembers.trim()) {
       const memberIds = initialMembers.split(',').map(id => id.trim()).filter(id => id);
       for (const mId of memberIds) {
@@ -64,85 +58,81 @@ export default function NewProjectPage() {
       .insert(membersToInsert);
 
     if (memberError) {
-      setError('メンバーの登録に失敗しました: ' + memberError.message);
+      setError('Failed to add members: ' + memberError.message);
     } else {
       router.push('/projects');
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
-      <div className="max-w-3xl mx-auto">
-        <Link href="/projects" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-semibold mb-8 transition-colors">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-          Back to Projects
-        </Link>
+    <div className="p-8 max-w-2xl mx-auto mt-10">
+      <Link href="/projects" className="text-sm font-medium text-[#5E6C84] hover:underline mb-8 inline-block">
+        &larr; Back to projects
+      </Link>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8">
-            <h1 className="text-3xl font-extrabold text-white">Create New Project</h1>
-            <p className="text-indigo-100 mt-2 opacity-90">Start a new initiative and invite your team</p>
-          </div>
+      <div className="bg-white rounded border border-[#DFE1E6] shadow-sm">
+        <div className="p-6 border-b border-[#DFE1E6]">
+          <h1 className="text-2xl font-bold text-[#172B4D]">Create project</h1>
+        </div>
 
-          <div className="p-8">
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg" role="alert">
-                <p>{error}</p>
-              </div>
-            )}
+        <div className="p-6 pt-4">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded text-sm" role="alert">
+              <p>{error}</p>
+            </div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Project Name <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-slate-50 focus:bg-white"
-                  placeholder="e.g. Website Redesign"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Name <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none"
+                placeholder="Try a team name, project goal, milestone..."
+                required
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Description</label>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-slate-50 focus:bg-white h-32 resize-none"
-                  placeholder="Describe the goals and scope of this project..."
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Description</label>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none h-24 resize-y"
+                placeholder="What is this project about?"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Initial Members (User IDs)</label>
-                <input
-                  type="text"
-                  value={initialMembers}
-                  onChange={(e) => setInitialMembers(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-slate-50 focus:bg-white"
-                  placeholder="e.g. alice@gmail.com, bob@gmail.com (comma separated)"
-                />
-                <p className="text-xs text-slate-500 mt-2">You will automatically be added as the Project Leader.</p>
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Initial team members</label>
+              <input
+                type="text"
+                value={initialMembers}
+                onChange={(e) => setInitialMembers(e.target.value)}
+                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none"
+                placeholder="e.g. alice, bob (comma separated IDs)"
+              />
+              <p className="text-xs text-[#5E6C84] mt-1.5">You will automatically be added as the Project Lead.</p>
+            </div>
 
-              <div className="pt-6 border-t border-slate-100 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => router.push('/projects')}
-                  className="mr-4 px-6 py-3 font-bold text-slate-500 hover:text-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                >
-                  Create Project
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="pt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => router.push('/projects')}
+                className="px-4 py-2 font-medium text-[#42526E] hover:bg-[#EBECF0] rounded transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

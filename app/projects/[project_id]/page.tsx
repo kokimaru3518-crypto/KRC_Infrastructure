@@ -23,7 +23,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const { project_id } = use(params);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  // プロジェクトの型を簡易的に定義
   const [project, setProject] = useState<{ project_id: string, project_name: string, text: string | null, created_at: string | null } | null>(null);
   const [userId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -35,7 +34,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const supabase = useMemo(() => createClient(), []);
 
   const fetchProjectData = useCallback(async (currentUserId: string) => {
-    // プロジェクト情報の取得
     const { data: pData, error: pError } = await supabase
       .from('projects')
       .select('*')
@@ -44,7 +42,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     if (pError) setError(pError.message);
     else setProject(pData);
 
-    // メンバー情報の取得
     const { data: mData, error: mError } = await supabase
       .from('project_members')
       .select('*')
@@ -56,7 +53,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       setIsLeader(currentUserRole === 'leader');
     }
 
-    // タスク情報の取得
     const { data: tData, error: tError } = await supabase
       .from('tasks')
       .select('*')
@@ -84,7 +80,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .update({ role: 'member' })
       .eq('project_id', project_id)
       .eq('user_id', memberId);
-    if (error) setError('承認に失敗しました: ' + error.message);
+    if (error) setError('Approve failed: ' + error.message);
     else fetchProjectData(userId!);
   };
 
@@ -94,120 +90,145 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .delete()
       .eq('project_id', project_id)
       .eq('user_id', memberId);
-    if (error) setError('否認に失敗しました: ' + error.message);
+    if (error) setError('Reject failed: ' + error.message);
     else fetchProjectData(userId!);
   };
 
-  if (!userId || !project) return <div className="p-8">Loading...</div>;
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ situation: newStatus })
+      .eq('task_id', taskId);
+    if (error) setError('Status update failed: ' + error.message);
+    else {
+      setTasks(tasks.map(t => t.task_id === taskId ? { ...t, situation: newStatus } : t));
+    }
+  };
+
+  if (!userId || !project) return <div className="p-8 text-[#5E6C84]">Loading project...</div>;
+
+  const todoTasks = tasks.filter(t => !t.situation || t.situation === 'waiting' || t.situation === 'TO DO');
+  const inProgressTasks = tasks.filter(t => t.situation === 'in_progress' || t.situation === 'IN PROGRESS');
+  const doneTasks = tasks.filter(t => t.situation === 'done' || t.situation === 'DONE');
+
+  const renderTaskCard = (task: Task) => (
+    <div key={task.task_id} className="bg-white p-3 rounded shadow-sm border border-[#DFE1E6] hover:bg-[#FAFBFC] cursor-pointer group flex flex-col gap-3">
+      <div className="text-sm font-medium text-[#172B4D] leading-snug break-words">
+        {task.task_name}
+      </div>
+      <div className="flex justify-between items-center mt-auto">
+        <select
+          value={task.situation || 'waiting'}
+          onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs border border-[#DFE1E6] rounded bg-[#F4F5F7] text-[#5E6C84] py-0.5 px-1 font-semibold cursor-pointer hover:bg-[#EBECF0]"
+        >
+          <option value="waiting">TO DO</option>
+          <option value="in_progress">IN PROGRESS</option>
+          <option value="done">DONE</option>
+        </select>
+
+        <div className="flex gap-2">
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${task.priority === 2 ? 'bg-[#DE350B]' : task.priority === 1 ? 'bg-[#FF991F]' : 'bg-[#0052CC]'}`} title={`Priority: ${task.priority}`}>
+            P{task.priority || 0}
+          </div>
+          {task.user_id && (
+            <div className="w-5 h-5 rounded-full bg-[#DFE1E6] flex items-center justify-center text-[10px] font-bold text-[#172B4D] shrink-0" title={`Assignee: ${task.user_id}`}>
+              {task.user_id.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-
-        {/* Header */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex justify-between items-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+    <div className="flex flex-col h-full bg-[#FAFBFC]">
+      {/* Project Header */}
+      <div className="px-8 py-6 pb-2 shrink-0 border-b border-[#DFE1E6] bg-white">
+        <nav className="text-sm text-[#5E6C84] mb-2 flex items-center gap-2 font-medium">
+          <Link href="/projects" className="hover:underline">Projects</Link>
+          <span>/</span>
+          <span className="text-[#172B4D]">{project.project_name}</span>
+        </nav>
+        <div className="flex justify-between items-end">
           <div>
-            <Link href="/projects" className="text-sm font-bold text-indigo-500 hover:text-indigo-700 mb-2 inline-block">&larr; Back to Projects</Link>
-            <h1 className="text-4xl font-extrabold text-slate-900">{project.project_name}</h1>
-            <p className="text-slate-500 mt-2">{project.text}</p>
+            <h1 className="text-2xl font-bold text-[#172B4D] mb-1">{project.project_name}</h1>
+            <p className="text-[#5E6C84] text-sm max-w-2xl">{project.text}</p>
           </div>
-          <Link
-            href={`/projects/${project_id}/tasks/new`}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-transform transform hover:-translate-y-0.5"
-          >
-            + Create Task
-          </Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-xl border border-red-200">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* Main Tasks Area */}
-          <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center">
-              Tasks <span className="ml-3 bg-indigo-100 text-indigo-800 py-1 px-3 rounded-full text-sm">{tasks.length}</span>
-            </h2>
-
-            {tasks.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300">
-                <p className="text-slate-500 font-medium text-lg">No tasks yet.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {tasks.map(task => (
-                  <div key={task.task_id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group flex justify-between items-center">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                        {task.task_name}
-                      </h3>
-                      <div className="flex gap-4 mt-2 text-sm text-slate-500">
-                        <span className="flex items-center">
-                          <span className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></span>
-                          {task.situation || 'waiting'}
-                        </span>
-                        <span>Assignee: <span className="font-semibold text-slate-700">{task.user_id || 'Unassigned'}</span></span>
-                        <span>Priority: <span className="font-semibold text-indigo-600">{task.priority || 0}</span></span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar Area */}
-          <div className="space-y-8">
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 border-b pb-4">Team Members</h2>
-              <div className="space-y-4">
-                {members.filter(m => m.role !== 'pending').map(m => (
-                  <div key={m.user_id} className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 truncate w-2/3" title={m.user_id}>{m.user_id}</span>
-                    <span className={`text-xs px-3 py-1 rounded-full font-bold ${m.role === 'leader' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                      {m.role}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pending Requests - Only visible to Leader */}
-            {isLeader && members.some(m => m.role === 'pending') && (
-              <div className="bg-orange-50 rounded-3xl p-6 border border-orange-200">
-                <h2 className="text-xl font-bold text-orange-800 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                  Pending Requests
-                </h2>
-                <div className="space-y-4">
-                  {members.filter(m => m.role === 'pending').map(m => (
-                    <div key={m.user_id} className="bg-white p-4 rounded-xl shadow-sm border border-orange-100">
-                      <p className="font-medium text-slate-800 truncate mb-3" title={m.user_id}>{m.user_id}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApprove(m.user_id)}
-                          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleReject(m.user_id)}
-                          className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-lg text-sm transition-colors"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+          <div className="flex gap-3">
+            {/* Team Members Avatar Group */}
+            <div className="flex -space-x-2 mr-4">
+              {members.filter(m => m.role !== 'pending').map(m => (
+                <div key={m.user_id} className="w-8 h-8 rounded-full bg-[#DFE1E6] border-2 border-white flex items-center justify-center text-xs font-bold text-[#172B4D] shadow-sm relative group" title={`${m.user_id} (${m.role})`}>
+                  {m.user_id.charAt(0).toUpperCase()}
+                  {m.role === 'leader' && <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white"></div>}
                 </div>
+              ))}
+            </div>
+            <Link
+              href={`/projects/${project_id}/tasks/new`}
+              className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-1.5 px-4 rounded shadow-sm text-sm transition-colors flex items-center h-8"
+            >
+              Create Issue
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="m-8 mb-0 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded text-sm shrink-0">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {isLeader && members.some(m => m.role === 'pending') && (
+        <div className="m-8 mb-0 bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded text-sm shrink-0 flex items-center justify-between">
+          <div className="font-semibold text-orange-900">Pending join requests ({members.filter(m => m.role === 'pending').length})</div>
+          <div className="flex gap-4">
+            {members.filter(m => m.role === 'pending').map(m => (
+              <div key={m.user_id} className="flex items-center gap-3">
+                <span className="font-medium text-orange-900">{m.user_id}</span>
+                <button onClick={() => handleApprove(m.user_id)} className="bg-white border border-green-500 text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs font-bold">Approve</button>
+                <button onClick={() => handleReject(m.user_id)} className="bg-white border border-red-500 text-red-600 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold">Reject</button>
               </div>
-            )}
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Kanban Board */}
+      <div className="flex-1 overflow-x-auto p-8 pt-6">
+        <div className="flex gap-6 h-full items-start min-w-[900px]">
+
+          {/* TO DO Column */}
+          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
+            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
+              <div>TO DO <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{todoTasks.length}</span></div>
+            </div>
+            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+              {todoTasks.map(renderTaskCard)}
+            </div>
+          </div>
+
+          {/* IN PROGRESS Column */}
+          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
+            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
+              <div>IN PROGRESS <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{inProgressTasks.length}</span></div>
+            </div>
+            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+              {inProgressTasks.map(renderTaskCard)}
+            </div>
+          </div>
+
+          {/* DONE Column */}
+          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
+            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
+              <div>DONE <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{doneTasks.length}</span></div>
+            </div>
+            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+              {doneTasks.map(renderTaskCard)}
+            </div>
           </div>
 
         </div>
