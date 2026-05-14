@@ -30,9 +30,19 @@ export default function LoginPage() {
         .eq('password', password)
         .single();
 
-      if (sbError || !data) {
+      if (sbError) {
         console.error('Supabase Error:', sbError);
-        setError('ログインに失敗しました。ユーザーIDまたはパスワードが間違っています。詳細: ' + (sbError?.message || 'データなし'));
+        if (sbError.code === 'PGRST116') {
+          // データが0件 = ユーザーIDまたはパスワードが違う
+          setError('ユーザーIDまたはパスワードが間違っています。');
+        } else if (sbError.message?.includes('row-level security')) {
+          // RLSエラー
+          setError('データベースのアクセス権エラーです。Supabase側のRLSポリシーを確認してください。(RLS): ' + sbError.message);
+        } else {
+          setError('ログインに失敗しました: ' + sbError.message);
+        }
+      } else if (!data) {
+        setError('ユーザーIDまたはパスワードが間違っています。');
       } else {
         // localStorageには user_name を保存（他の画面で表示やキーとして使うため）
         localStorage.setItem('krc_user_id', data.user_name);

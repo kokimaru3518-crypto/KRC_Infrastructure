@@ -23,6 +23,9 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
       return;
     }
 
+    // admin はリーダーチェックをバイパス
+    const isAdmin = currentUserId === 'admin';
+
     const { data } = await supabase
       .from('project_members')
       .select('user_id, role')
@@ -30,9 +33,8 @@ export default function NewTaskPage({ params }: { params: Promise<{ project_id: 
       .neq('role', 'pending');
 
     if (data) {
-      const isLeader = data.some(m => m.user_id === currentUserId && m.role === 'leader');
+      const isLeader = isAdmin || data.some(m => m.user_id === currentUserId && m.role === 'leader');
       if (!isLeader) {
-        // Redirect non-leaders back to the project page
         router.push(`/projects/${project_id}`);
         return;
       }

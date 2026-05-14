@@ -69,11 +69,23 @@ export default function ProjectsPage() {
     e.stopPropagation();
     if (!userId) return;
 
+    // user_name から実際の UUID を取得する
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_name', userId)
+      .single();
+
+    if (userError || !userData) {
+      setError('ユーザー情報の取得に失敗しました: ' + userError?.message);
+      return;
+    }
+
     const { error: sbError } = await supabase
       .from('project_members')
       .insert({
         project_id: projectId,
-        user_id: userId,
+        user_id: userData.user_id,
         role: 'pending',
       });
 

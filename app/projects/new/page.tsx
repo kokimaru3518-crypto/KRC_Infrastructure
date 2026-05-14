@@ -27,6 +27,19 @@ export default function NewProjectPage() {
     e.preventDefault();
     if (!userId) return;
 
+    // user_name から実際の UUID を取得する
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('user_name', userId)
+      .single();
+
+    if (userError || !userData) {
+      setError('ユーザー情報の取得に失敗しました: ' + userError?.message);
+      return;
+    }
+    const leaderUUID = userData.user_id;
+
     const newProjectId = crypto.randomUUID();
 
     const { error: projectError } = await supabase
@@ -42,14 +55,22 @@ export default function NewProjectPage() {
       return;
     }
 
-    const membersToInsert = [
-      { project_id: newProjectId, user_id: userId, role: 'leader' }
+    const membersToInsert: { project_id: string; user_id: string; role: string }[] = [
+      { project_id: newProjectId, user_id: leaderUUID, role: 'leader' }
     ];
 
     if (initialMembers.trim()) {
-      const memberIds = initialMembers.split(',').map(id => id.trim()).filter(id => id);
-      for (const mId of memberIds) {
-        membersToInsert.push({ project_id: newProjectId, user_id: mId, role: 'member' });
+      const memberNames = initialMembers.split(',').map(id => id.trim()).filter(id => id);
+      for (const mName of memberNames) {
+        // 追加メンバーも user_name → UUID に解決する
+        const { data: mData } = await supabase
+          .from('users')
+          .select('user_id')
+          .eq('user_name', mName)
+          .single();
+        if (mData) {
+          membersToInsert.push({ project_id: newProjectId, user_id: mData.user_id, role: 'member' });
+        }
       }
     }
 
