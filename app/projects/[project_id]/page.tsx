@@ -103,7 +103,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .update({ role: 'member' })
       .eq('project_id', project_id)
       .eq('user_id', memberId);
-    if (error) setError('Approve failed: ' + error.message);
+    if (error) setError('承認に失敗しました: ' + error.message);
     else fetchProjectData(session!);
   };
 
@@ -113,7 +113,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .delete()
       .eq('project_id', project_id)
       .eq('user_id', memberId);
-    if (error) setError('Reject failed: ' + error.message);
+    if (error) setError('拒否に失敗しました: ' + error.message);
     else fetchProjectData(session!);
   };
 
@@ -122,13 +122,13 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .from('tasks')
       .update({ situation: newStatus })
       .eq('task_id', taskId);
-    if (error) setError('Status update failed: ' + error.message);
+    if (error) setError('ステータスの更新に失敗しました: ' + error.message);
     else {
       setTasks(tasks.map(t => t.task_id === taskId ? { ...t, situation: newStatus } : t));
     }
   };
 
-  if (!session || !project) return <div className="p-8 text-slate-500 flex justify-center items-center h-full min-h-[50vh]">Loading project...</div>;
+  if (!session || !project) return <div className="p-8 text-slate-500 flex justify-center items-center h-full min-h-[50vh]">プロジェクトを読み込み中...</div>;
 
   const todoTasks = tasks.filter(t => !t.situation || t.situation === 'waiting' || t.situation === 'TO DO');
   const inProgressTasks = tasks.filter(t => t.situation === 'in_progress' || t.situation === 'IN PROGRESS');
@@ -152,11 +152,11 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
         </select>
 
         <div className="flex gap-2 items-center">
-          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white shrink-0 shadow-sm ${task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`} title={`Priority: ${task.priority}`}>
+          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white shrink-0 shadow-sm ${task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`} title={`優先度: ${task.priority}`}>
             P{task.priority || 0}
           </div>
           {task.user_id && (
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`Assignee: ${task.user_id}`}>
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`担当者: ${task.user_id}`}>
               {task.user_id.charAt(0).toUpperCase()}
             </div>
           )}
@@ -170,7 +170,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       {/* Project Header */}
       <div className="px-8 py-8 pb-6 shrink-0 border-b border-slate-200 bg-white">
         <nav className="text-sm text-slate-500 mb-4 flex items-center gap-2 font-medium">
-          <Link href="/projects" className="hover:text-slate-800 transition-colors">Projects</Link>
+          <Link href="/projects" className="hover:text-slate-800 transition-colors">プロジェクト</Link>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-semibold">{project.project_name}</span>
         </nav>
@@ -195,7 +195,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-                Create Issue
+                タスクを作成
               </Link>
             )}
           </div>
@@ -210,13 +210,13 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
 
       {isLeader && members.some(m => m.role === 'pending') && (
         <div className="m-8 mb-0 bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded text-sm shrink-0 flex items-center justify-between">
-          <div className="font-semibold text-orange-900">Pending join requests ({members.filter(m => m.role === 'pending').length})</div>
+          <div className="font-semibold text-orange-900">保留中の参加申請 ({members.filter(m => m.role === 'pending').length})</div>
           <div className="flex gap-4">
             {members.filter(m => m.role === 'pending').map(m => (
               <div key={m.user_id} className="flex items-center gap-3">
                 <span className="font-medium text-orange-900">{m.user_id}</span>
-                <button onClick={() => handleApprove(m.user_id)} className="bg-white border border-green-500 text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs font-bold">Approve</button>
-                <button onClick={() => handleReject(m.user_id)} className="bg-white border border-red-500 text-red-600 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold">Reject</button>
+                <button onClick={() => handleApprove(m.user_id)} className="bg-white border border-green-500 text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs font-bold">承認</button>
+                <button onClick={() => handleReject(m.user_id)} className="bg-white border border-red-500 text-red-600 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold">拒否</button>
               </div>
             ))}
           </div>

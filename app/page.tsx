@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       <div className={styles.card}>
         <h1 className={styles.title}>
-          {isLogin ? 'Log in to your account' : 'Sign up for your account'}
+          {isLogin ? 'アカウントにログイン' : 'アカウントを作成'}
         </h1>
 
         {error && (
@@ -63,25 +63,25 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div>
-            <label className={styles.label}>User ID</label>
+            <label className={styles.label}>ユーザーID</label>
             <input
               type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               className={styles.input}
-              placeholder="Enter your user ID"
+              placeholder="ユーザーIDを入力"
               required
             />
           </div>
 
           <div>
-            <label className={styles.label}>Password</label>
+            <label className={styles.label}>パスワード</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={styles.input}
-              placeholder="Enter password"
+              placeholder="パスワードを入力"
               required
             />
           </div>
@@ -91,7 +91,7 @@ export default function LoginPage() {
             disabled={loading}
             className={styles.submitButton}
           >
-            {loading ? '処理中...' : (isLogin ? 'Log in' : 'Sign up')}
+            {loading ? '処理中...' : (isLogin ? 'ログイン' : 'サインアップ')}
           </button>
         </form>
 
@@ -103,7 +103,7 @@ export default function LoginPage() {
             }}
             className={styles.switchButton}
           >
-            {isLogin ? "Sign up for an account" : "Log in to an existing account"}
+            {isLogin ? "新しくアカウントを作成する" : "既存のアカウントでログインする"}
           </button>
         </div>
       </div>
