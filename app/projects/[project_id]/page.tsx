@@ -6,6 +6,7 @@ import { createClient } from '../../../supabase/client';
 import { getSession, type Session } from '../../../lib/session';
 import Link from 'next/link';
 
+// --- 型定義 ---
 type Task = {
   task_id: string;
   task_name: string;
@@ -21,13 +22,23 @@ type Task = {
 type Member = {
   user_id: string;
   role: string | null;
+  users?: {
+    user_name: string;
+  } | null;
+};
+
+type Project = {
+  project_id: string;
+  project_name: string;
+  text: string | null;
+  created_at: string | null;
 };
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ project_id: string }> }) {
   const { project_id } = use(params);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [project, setProject] = useState<{ project_id: string, project_name: string, text: string | null, created_at: string | null } | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLeader, setIsLeader] = useState(false);
   const [error, setError] = useState('');
@@ -38,44 +49,52 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     const isAdmin = currentSession.user_name === 'admin';
     const currentUUID = currentSession.user_id;
 
-    // まずメンバーかどうかを確認する
+    // 1. メンバー情報の取得（名前も一緒に取得）
     const { data: mData, error: mError } = await supabase
       .from('project_members')
-      .select('*')
+      .select(`
+        user_id,
+        role,
+        users (
+          user_name
+        )
+      `)
       .eq('project_id', project_id);
+
     if (mError) {
       setError(mError.message);
       return;
     }
 
+    const membersData = (mData || []) as Member[];
+
     if (isAdmin) {
-      // admin は全プロジェクトにフルアクセス（リーダー権限）
-      setMembers(mData || []);
+      setMembers(membersData);
       setIsLeader(true);
     } else {
-      // UUID でメンバーシップを確認
-      const currentUserRole = mData?.find(m => m.user_id === currentUUID)?.role;
+      const currentUserRole = membersData.find(m => m.user_id === currentUUID)?.role;
       const isMember = !!currentUserRole && currentUserRole !== 'pending';
 
-      // 参加していない（または申請中）ユーザーはプロジェクト一覧へ戻す
       if (!isMember) {
         router.push('/projects');
         return;
       }
 
-      setMembers(mData || []);
+      setMembers(membersData);
       setIsLeader(currentUserRole === 'leader');
     }
 
-    // メンバーであることが確認できた場合のみプロジェクト情報とタスクを取得
+    // 2. プロジェクト情報の取得
     const { data: pData, error: pError } = await supabase
       .from('projects')
       .select('*')
       .eq('project_id', project_id)
       .single();
+    
     if (pError) setError(pError.message);
-    else setProject(pData);
+    else setProject(pData as Project);
 
+    // 3. タスク情報の取得（担当者名も一緒に取得）
     const { data: tData, error: tError } = await supabase
       .from('tasks')
       .select(`
@@ -84,8 +103,9 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       `)
       .eq('project_id', project_id)
       .order('created_at', { ascending: false });
+
     if (tError) setError(tError.message);
-    else setTasks(tData || []);
+    else setTasks((tData || []) as Task[]);
   }, [project_id, supabase, router]);
 
   const initialized = useRef(false);
@@ -130,7 +150,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       .eq('task_id', taskId);
     if (error) setError('ステータスの更新に失敗しました: ' + error.message);
     else {
-      setTasks(tasks.map(t => t.task_id === taskId ? { ...t, situation: newStatus } : t));
+      setTasks(prev => prev.map(t => t.task_id === taskId ? { ...t, situation: newStatus } : t));
     }
   };
 
@@ -141,59 +161,53 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   const doneTasks = tasks.filter(t => t.situation === 'done' || t.situation === 'DONE');
 
   const renderTaskCard = (task: Task) => (
-  <div key={task.task_id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex flex-col gap-3">
-    <div className="text-sm font-semibold text-slate-800 leading-snug break-words group-hover:text-indigo-600 transition-colors">
-      {task.task_name}
-    </div>
-    
-    <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
-      {/* ステータス選択 */}
-      <select
-        value={task.situation || 'waiting'}
-        onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
-        onClick={(e) => e.stopPropagation()}
-        className="text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600 py-1 px-2 font-medium cursor-pointer hover:bg-slate-100 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
-      >
-        <option value="waiting">TO DO</option>
-        <option value="in_progress">IN PROGRESS</option>
-        <option value="done">DONE</option>
-      </select>
-
-      <div className="flex flex-col items-end gap-2">
-        {/* 優先度バッジ */}
-        <div 
-          className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0 ${
-            task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 
-            task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 
-            'bg-gradient-to-br from-indigo-500 to-blue-600'
-          }`}
+    <div key={task.task_id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex flex-col gap-3">
+      <div className="text-sm font-semibold text-slate-800 leading-snug break-words group-hover:text-indigo-600 transition-colors">
+        {task.task_name}
+      </div>
+      
+      <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
+        <select
+          value={task.situation || 'waiting'}
+          onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600 py-1 px-2 font-medium cursor-pointer hover:bg-slate-100 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
         >
-          {task.priority === 2 ? 'High' : task.priority === 1 ? 'Middle' : 'Low'}
-        </div>
+          <option value="waiting">TO DO</option>
+          <option value="in_progress">IN PROGRESS</option>
+          <option value="done">DONE</option>
+        </select>
 
-        {/* ★ アイコンと名前を横並びにするセクション */}
-        {task.users?.user_name ? (
-          <div className="flex items-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-100">
-            {/* アイコン */}
-            <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0 shadow-sm">
-              {task.users.user_name.charAt(0).toUpperCase()}
-            </div>
-            {/* 名前 */}
-            <span className="text-[11px] font-medium text-slate-600 truncate max-w-[80px]">
-              {task.users.user_name}
-            </span>
+        <div className="flex flex-col items-end gap-2">
+          <div 
+            className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white shadow-sm shrink-0 ${
+              task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : 
+              task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 
+              'bg-gradient-to-br from-indigo-500 to-blue-600'
+            }`}
+          >
+            {task.priority === 2 ? 'High' : task.priority === 1 ? 'Middle' : 'Low'}
           </div>
-        ) : (
-          <span className="text-[10px] text-slate-400 italic">未割り当て</span>
-        )}
+
+          {task.users?.user_name ? (
+            <div className="flex items-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-100" title={`担当者: ${task.users.user_name}`}>
+              <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0 shadow-sm">
+                {task.users.user_name.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-[11px] font-medium text-slate-600 truncate max-w-[80px]">
+                {task.users.user_name}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[10px] text-slate-400 italic">未割り当て</span>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
-      {/* Project Header */}
       <div className="px-8 py-8 pb-6 shrink-0 border-b border-slate-200 bg-white">
         <nav className="text-sm text-slate-500 mb-4 flex items-center gap-2 font-medium">
           <Link href="/projects" className="hover:text-slate-800 transition-colors">プロジェクト</Link>
@@ -206,11 +220,10 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
             <p className="text-slate-500 text-sm max-w-2xl leading-relaxed">{project.text}</p>
           </div>
           <div className="flex gap-4 items-center">
-            {/* Team Members Avatar Group */}
             <div className="flex -space-x-3 mr-2">
               {members.filter(m => m.role !== 'pending').map(m => (
-                <div key={m.user_id} className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm relative group hover:z-10 transition-transform hover:scale-110 cursor-default" title={`${m.user_id} (${m.role})`}>
-                  {m.user_id.charAt(0).toUpperCase()}
+                <div key={m.user_id} className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm relative group hover:z-10 transition-transform hover:scale-110 cursor-default" title={`${m.users?.user_name || m.user_id} (${m.role})`}>
+                  {(m.users?.user_name || m.user_id).charAt(0).toUpperCase()}
                   {m.role === 'leader' && <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white shadow-sm"></div>}
                 </div>
               ))}
@@ -240,7 +253,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
           <div className="flex gap-4">
             {members.filter(m => m.role === 'pending').map(m => (
               <div key={m.user_id} className="flex items-center gap-3">
-                <span className="font-medium text-orange-900">{m.user_id}</span>
+                <span className="font-medium text-orange-900">{m.users?.user_name || m.user_id}</span>
                 <button onClick={() => handleApprove(m.user_id)} className="bg-white border border-green-500 text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs font-bold">承認</button>
                 <button onClick={() => handleReject(m.user_id)} className="bg-white border border-red-500 text-red-600 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold">拒否</button>
               </div>
@@ -249,11 +262,9 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
         </div>
       )}
 
-      {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto p-8 pt-8">
         <div className="flex gap-6 h-full items-start min-w-[950px]">
-
-          {/* TO DO Column */}
+          {/* TO DO */}
           <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
             <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
               <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
@@ -265,7 +276,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
-          {/* IN PROGRESS Column */}
+          {/* IN PROGRESS */}
           <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
             <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
               <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
@@ -277,7 +288,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
-          {/* DONE Column */}
+          {/* DONE */}
           <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
             <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
               <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
@@ -288,7 +299,6 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
               {doneTasks.map(renderTaskCard)}
             </div>
           </div>
-
         </div>
       </div>
     </div>
