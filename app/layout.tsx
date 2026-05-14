@@ -1,106 +1,106 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { getSession, type Session } from '../lib/session';
+import { Inter } from 'next/font/google';
 import './globals.css';
+import { useRouter, usePathname } from 'next/navigation';
+import { createClient } from '../supabase/client';
+import Link from 'next/link';
+import { useEffect, useState, useMemo } from 'react';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+const inter = Inter({ subsets: ['latin'] });
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-
-  // セッション状態の監視
-  const refreshSession = async () => {
-    const s = await getSession();
-    setSession(s);
-    setLoading(false);
-  };
+  const [mounted, setMounted] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    void refreshSession();
-  }, [pathname]);
+    setMounted(true);
+  }, []);
 
-  // ログアウト処理
-  const handleLogout = async () => {
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     try {
-      // サーバー側のセッションを破棄
-      await fetch('/api/auth/logout', { method: 'POST' });
-      
-      // クライアント側の状態を即座にクリア
-      setSession(null);
-      
-      // ログイン画面（トップ）へ強制的に移動し、ページをリフレッシュ
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // エラー時でも強制移動
+      if (typeof window !== 'undefined') {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      }
+
+      const expireStr = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      ['session', 'sb-access-token', 'sb-refresh-token'].forEach(name => {
+        document.cookie = `${name}=; path=/; ${expireStr}; SameSite=Lax`;
+        document.cookie = `${name}=; path=/; domain=${window.location.hostname}; ${expireStr}; SameSite=Lax`;
+      });
+
+      await supabase.auth.signOut();
+      window.location.href = '/?loggedout=true';
+    } catch (err) {
       window.location.href = '/';
     }
   };
 
-  const navItems = [
-    { name: 'ホーム', href: '/', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> },
-    { name: 'プロジェクト一覧', href: '/projects', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> },
-    { name: '新規プロジェクト', href: '/projects/new', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg> },
-  ];
+  const isLoginPage = pathname === '/';
+
+  if (!mounted) return (
+    <html lang="ja">
+      <body className={inter.className}></body>
+    </html>
+  );
 
   return (
     <html lang="ja">
-      <body className="antialiased">
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-          {/* Header */}
-          <header className="h-16 bg-white border-b border-slate-200 flex flex-row items-center justify-between px-6 shrink-0 z-40 w-full fixed top-0">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">K</div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900">KRC Software</span>
-            </Link>
-            {session && (
-              <div className="flex items-center gap-4">
-                <div className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">{session.user_name}</div>
+      <body className={`${inter.className} bg-white text-slate-900`}>
+        {!isLoginPage ? (
+          <div className="flex min-h-screen relative">
+            {/* Jira Sidebar */}
+            <aside className="w-64 bg-[#0747A6] text-white flex flex-col fixed inset-y-0 left-0 z-[100] shadow-xl">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                    <div className="w-5 h-5 bg-[#0747A6] rounded-sm transform rotate-45"></div>
+                  </div>
+                  <span className="text-lg font-bold tracking-tight">KRC Infra</span>
+                </div>
+
+                <nav className="space-y-1">
+                  <Link href="/projects" className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-colors ${pathname.startsWith('/projects') ? 'bg-white/20 text-white font-bold' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    プロジェクト
+                  </Link>
+
+                  <Link href="/mytasks" className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-colors ${pathname === '/mytasks' ? 'bg-white/20 text-white font-bold' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10 a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002-2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    マイタスク
+                  </Link>
+                </nav>
+              </div>
+
+              <div className="mt-auto p-6 border-t border-white/10">
                 <button 
                   onClick={handleLogout} 
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all flex items-center gap-2 font-bold text-xs"
-                  title="ログアウト"
+                  type="button"
+                  className="flex items-center gap-3 px-3 py-2 rounded text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors w-full text-left"
                 >
-                  <span className="hidden sm:inline">Logout</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                  ログアウト
                 </button>
               </div>
-            )}
-          </header>
+            </aside>
 
-          <div className="flex flex-1 pt-16">
-            {/* Sidebar */}
-            {session && (
-              <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col fixed h-[calc(100vh-4rem)] z-30 transition-all shadow-sm">
-                <div className="p-4 space-y-1">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                        pathname === item.href ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                      }`}
-                    >
-                      {item.icon}
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
-              </aside>
-            )}
-
-            {/* Page Content */}
-            <main className={`flex-1 w-full overflow-y-auto ${session ? 'md:ml-64' : ''}`}>
-              {loading ? (
-                <div className="p-20 text-center font-black text-slate-300 animate-pulse uppercase tracking-[0.3em]">Authenticating...</div>
-              ) : children}
+            <main className="flex-1 ml-64 min-h-screen">
+              {children}
             </main>
           </div>
-        </div>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
