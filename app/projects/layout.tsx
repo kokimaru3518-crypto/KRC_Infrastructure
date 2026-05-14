@@ -28,28 +28,28 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
     if (!session) return null;
 
     return (
-        <div className="min-h-screen bg-[#F4F5F7] flex flex-col font-sans text-[#172B4D]">
-            {/* Top Navigation Bar - Jira style */}
-            <header className="h-14 bg-white border-b border-[#DFE1E6] flex flex-row items-center justify-between px-4 shrink-0 shadow-[0_1px_1px_rgba(9,30,66,0.05)] z-20 w-full fixed top-0">
-                <div className="flex items-center gap-6">
-                    <Link href="/projects" className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-[#0052CC] rounded flex items-center justify-center text-white font-bold text-sm leading-none shadow-sm">
+        <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+            {/* Top Navigation Bar - Modern style */}
+            <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex flex-row items-center justify-between px-6 shrink-0 shadow-sm z-20 w-full fixed top-0">
+                <div className="flex items-center gap-8">
+                    <Link href="/projects" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+                        <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-sm leading-none shadow-md">
                             K
                         </div>
-                        <span className="font-bold text-base tracking-tight text-[#172B4D]">KRC Software</span>
+                        <span className="font-extrabold text-lg tracking-tight text-slate-900">KRC Software</span>
                     </Link>
-                    <nav className="hidden md:flex items-center gap-1">
-                        <Link href="/projects" className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${pathname === '/projects' ? 'bg-[#0052CC] text-white' : 'text-[#42526E] hover:bg-slate-100'}`}>Projects</Link>
-                        <Link href="/projects/new" className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${pathname === '/projects/new' ? 'bg-[#0052CC] text-white' : 'text-[#42526E] hover:bg-slate-100'}`}>Create</Link>
+                    <nav className="hidden md:flex items-center gap-2">
+                        <Link href="/projects" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${pathname === '/projects' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Projects</Link>
+                        <Link href="/projects/new" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${pathname === '/projects/new' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Create</Link>
                     </nav>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="hidden sm:block text-sm font-medium text-[#42526E]">
+                    <div className="hidden sm:block text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
                         {session.user_name}
                     </div>
                     <button
                         onClick={handleLogout}
-                        className="w-8 h-8 rounded-full bg-[#DFE1E6] hover:bg-[#C1C7D0] flex items-center justify-center text-[#42526E] transition-colors cursor-pointer"
+                        className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
                         title="Logout"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -58,9 +58,9 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
             </header>
 
             {/* Main Content Layout */}
-            <div className="flex flex-1 pt-14 h-full">
+            <div className="flex flex-1 pt-16 h-full">
                 {/* Page Content */}
-                <main className="flex-1 w-full max-w-full overflow-y-auto min-h-[calc(100vh-3.5rem)]">
+                <main className="flex-1 w-full max-w-full overflow-y-auto min-h-[calc(100vh-4rem)]">
                     {children}
                 </main>
             </div>

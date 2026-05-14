@@ -78,70 +78,75 @@ export default function NewProjectPage() {
 
   return (
     <div className="p-8 max-w-2xl mx-auto mt-10">
-      <Link href="/projects" className="text-sm font-medium text-[#5E6C84] hover:underline mb-8 inline-block">
-        &larr; Back to projects
+      <Link href="/projects" className="text-sm font-medium text-slate-500 hover:text-slate-800 hover:underline mb-8 flex items-center gap-1 w-fit transition-colors">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to projects
       </Link>
 
-      <div className="bg-white rounded border border-[#DFE1E6] shadow-sm">
-        <div className="p-6 border-b border-[#DFE1E6]">
-          <h1 className="text-2xl font-bold text-[#172B4D]">Create project</h1>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+          <h1 className="text-2xl font-extrabold text-slate-900">Create new project</h1>
+          <p className="text-sm text-slate-500 mt-1">Set up a new project to start collaborating.</p>
         </div>
 
-        <div className="p-6 pt-4">
+        <div className="p-6 pt-5">
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded text-sm" role="alert">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-sm text-sm" role="alert">
               <p>{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Name <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">Name <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none"
+                className="w-full px-4 py-2.5 rounded-lg text-sm border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-slate-50 hover:bg-white transition-all outline-none"
                 placeholder="Try a team name, project goal, milestone..."
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Description</label>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">Description</label>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none h-24 resize-y"
+                className="w-full px-4 py-2.5 rounded-lg text-sm border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-slate-50 hover:bg-white transition-all outline-none h-28 resize-y"
                 placeholder="What is this project about?"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[#172B4D] mb-1.5">Initial team members</label>
+              <label className="block text-sm font-semibold text-slate-800 mb-1.5">Initial team members</label>
               <input
                 type="text"
                 value={initialMembers}
                 onChange={(e) => setInitialMembers(e.target.value)}
-                className="w-full px-3 py-2 rounded text-sm border border-[#DFE1E6] focus:border-[#4C9AFF] focus:ring-1 focus:ring-[#4C9AFF] bg-[#FAFBFC] hover:bg-[#EBECF0] transition-colors outline-none"
+                className="w-full px-4 py-2.5 rounded-lg text-sm border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-slate-50 hover:bg-white transition-all outline-none"
                 placeholder="e.g. alice, bob (comma separated User IDs)"
               />
-              <p className="text-xs text-[#5E6C84] mt-1.5">You will automatically be added as the Project Lead.</p>
+              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                You will automatically be added as the Project Lead.
+              </p>
             </div>
 
-            <div className="pt-4 flex justify-end gap-3">
+            <div className="pt-6 flex justify-end gap-3 border-t border-slate-100 mt-8">
               <button
                 type="button"
                 onClick={() => router.push('/projects')}
-                className="px-4 py-2 font-medium text-[#42526E] hover:bg-[#EBECF0] rounded transition-colors text-sm"
+                className="px-5 py-2.5 font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-colors text-sm"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
               >
-                Create
+                Create Project
               </button>
             </div>
           </form>

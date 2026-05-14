@@ -4,9 +4,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #FAFBFC;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  color: #172B4D;
+  color: #0f172a;
   padding-left: 1rem;
   padding-right: 1rem;
 }
@@ -27,39 +27,40 @@
 }
 
 .logoIcon {
-  width: 2.5rem;
-  height: 2.5rem;
-  background-color: #0052CC;
-  border-radius: 0.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  font-weight: 700;
-  font-size: 1.25rem;
+  font-weight: 800;
+  font-size: 1.5rem;
   line-height: 1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -2px rgba(79, 70, 229, 0.2);
 }
 
 .logoText {
   font-weight: 800;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   line-height: 2rem;
   letter-spacing: -0.025em;
-  color: #172B4D;
+  color: #0f172a;
 }
 
 .card {
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
   padding-left: 2rem;
   padding-right: 2rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #DFE1E6;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   box-sizing: border-box;
 }
 
@@ -73,9 +74,9 @@
 .title {
   font-size: 1.5rem;
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
-  color: #172B4D;
+  color: #0f172a;
   margin-bottom: 2rem;
 }
 
@@ -98,8 +99,8 @@
   display: block;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  font-weight: 700;
-  color: #5E6C84;
+  font-weight: 600;
+  color: #475569;
   margin-bottom: 0.5rem;
 }
 
@@ -107,44 +108,45 @@
   width: 100%;
   padding-left: 1rem;
   padding-right: 1rem;
-  padding-top: 0.625rem;
-  padding-bottom: 0.625rem;
-  border: 2px solid #DFE1E6;
-  border-radius: 0.25rem;
-  background-color: #FAFBFC;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   font-size: 1rem;
   line-height: 1.5rem;
-  color: #172B4D;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: #0f172a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
   box-sizing: border-box;
 }
 
 .input:hover {
-  background-color: #f9fafb;
+  background-color: #ffffff;
+  border-color: #cbd5e1;
 }
 
 .input:focus {
   background-color: #ffffff;
-  border-color: #4C9AFF;
-  box-shadow: 0 0 0 4px rgba(76, 154, 255, 0.2);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
 }
 
 .submitButton {
   width: 100%;
-  background-color: #0052CC;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
-  font-weight: 700;
-  padding-top: 0.625rem;
-  padding-bottom: 0.625rem;
+  font-weight: 600;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
   padding-left: 1rem;
   padding-right: 1rem;
-  border-radius: 0.25rem;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.5rem;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 1rem;
   line-height: 1.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3), 0 2px 4px -2px rgba(79, 70, 229, 0.3);
   margin-top: 2rem;
   border: none;
   cursor: pointer;
@@ -152,12 +154,13 @@
 }
 
 .submitButton:hover {
-  background-color: #0047b3;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -4px rgba(79, 70, 229, 0.4);
 }
 
 .submitButton:active {
-  background-color: #003d99;
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px -1px rgba(79, 70, 229, 0.3);
 }
 
 .submitButton:disabled {
@@ -168,12 +171,12 @@
 .switchSection {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #DFE1E6;
+  border-top: 1px solid #e2e8f0;
   text-align: center;
 }
 
 .switchButton {
-  color: #0052CC;
+  color: #4f46e5;
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 600;

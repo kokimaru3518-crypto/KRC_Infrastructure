@@ -128,35 +128,35 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     }
   };
 
-  if (!session || !project) return <div className="p-8 text-[#5E6C84]">Loading project...</div>;
+  if (!session || !project) return <div className="p-8 text-slate-500 flex justify-center items-center h-full min-h-[50vh]">Loading project...</div>;
 
   const todoTasks = tasks.filter(t => !t.situation || t.situation === 'waiting' || t.situation === 'TO DO');
   const inProgressTasks = tasks.filter(t => t.situation === 'in_progress' || t.situation === 'IN PROGRESS');
   const doneTasks = tasks.filter(t => t.situation === 'done' || t.situation === 'DONE');
 
   const renderTaskCard = (task: Task) => (
-    <div key={task.task_id} className="bg-white p-3 rounded shadow-sm border border-[#DFE1E6] hover:bg-[#FAFBFC] cursor-pointer group flex flex-col gap-3">
-      <div className="text-sm font-medium text-[#172B4D] leading-snug break-words">
+    <div key={task.task_id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group flex flex-col gap-3">
+      <div className="text-sm font-semibold text-slate-800 leading-snug break-words group-hover:text-indigo-600 transition-colors">
         {task.task_name}
       </div>
-      <div className="flex justify-between items-center mt-auto">
+      <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
         <select
           value={task.situation || 'waiting'}
           onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className="text-xs border border-[#DFE1E6] rounded bg-[#F4F5F7] text-[#5E6C84] py-0.5 px-1 font-semibold cursor-pointer hover:bg-[#EBECF0]"
+          className="text-xs border border-slate-200 rounded-md bg-slate-50 text-slate-600 py-1 px-2 font-medium cursor-pointer hover:bg-slate-100 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-all"
         >
           <option value="waiting">TO DO</option>
           <option value="in_progress">IN PROGRESS</option>
           <option value="done">DONE</option>
         </select>
 
-        <div className="flex gap-2">
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${task.priority === 2 ? 'bg-[#DE350B]' : task.priority === 1 ? 'bg-[#FF991F]' : 'bg-[#0052CC]'}`} title={`Priority: ${task.priority}`}>
+        <div className="flex gap-2 items-center">
+          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white shrink-0 shadow-sm ${task.priority === 2 ? 'bg-gradient-to-br from-red-500 to-rose-600' : task.priority === 1 ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`} title={`Priority: ${task.priority}`}>
             P{task.priority || 0}
           </div>
           {task.user_id && (
-            <div className="w-5 h-5 rounded-full bg-[#DFE1E6] flex items-center justify-center text-[10px] font-bold text-[#172B4D] shrink-0" title={`Assignee: ${task.user_id}`}>
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0 border border-slate-200 shadow-sm" title={`Assignee: ${task.user_id}`}>
               {task.user_id.charAt(0).toUpperCase()}
             </div>
           )}
@@ -166,34 +166,35 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#FAFBFC]">
+    <div className="flex flex-col h-full bg-slate-50/50">
       {/* Project Header */}
-      <div className="px-8 py-6 pb-2 shrink-0 border-b border-[#DFE1E6] bg-white">
-        <nav className="text-sm text-[#5E6C84] mb-2 flex items-center gap-2 font-medium">
-          <Link href="/projects" className="hover:underline">Projects</Link>
-          <span>/</span>
-          <span className="text-[#172B4D]">{project.project_name}</span>
+      <div className="px-8 py-8 pb-6 shrink-0 border-b border-slate-200 bg-white">
+        <nav className="text-sm text-slate-500 mb-4 flex items-center gap-2 font-medium">
+          <Link href="/projects" className="hover:text-slate-800 transition-colors">Projects</Link>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-900 font-semibold">{project.project_name}</span>
         </nav>
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-2xl font-bold text-[#172B4D] mb-1">{project.project_name}</h1>
-            <p className="text-[#5E6C84] text-sm max-w-2xl">{project.text}</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">{project.project_name}</h1>
+            <p className="text-slate-500 text-sm max-w-2xl leading-relaxed">{project.text}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-4 items-center">
             {/* Team Members Avatar Group */}
-            <div className="flex -space-x-2 mr-4">
+            <div className="flex -space-x-3 mr-2">
               {members.filter(m => m.role !== 'pending').map(m => (
-                <div key={m.user_id} className="w-8 h-8 rounded-full bg-[#DFE1E6] border-2 border-white flex items-center justify-center text-xs font-bold text-[#172B4D] shadow-sm relative group" title={`${m.user_id} (${m.role})`}>
+                <div key={m.user_id} className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm relative group hover:z-10 transition-transform hover:scale-110 cursor-default" title={`${m.user_id} (${m.role})`}>
                   {m.user_id.charAt(0).toUpperCase()}
-                  {m.role === 'leader' && <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white"></div>}
+                  {m.role === 'leader' && <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white shadow-sm"></div>}
                 </div>
               ))}
             </div>
             {isLeader && (
               <Link
                 href={`/projects/${project_id}/tasks/new`}
-                className="bg-[#0052CC] hover:bg-[#0047b3] text-white font-medium py-1.5 px-4 rounded shadow-sm text-sm transition-colors flex items-center h-8"
+                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 text-sm flex items-center gap-2"
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                 Create Issue
               </Link>
             )}
@@ -223,35 +224,41 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
       )}
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto p-8 pt-6">
-        <div className="flex gap-6 h-full items-start min-w-[900px]">
+      <div className="flex-1 overflow-x-auto p-8 pt-8">
+        <div className="flex gap-6 h-full items-start min-w-[950px]">
 
           {/* TO DO Column */}
-          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
-            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
-              <div>TO DO <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{todoTasks.length}</span></div>
+          <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
+            <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
+              <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                TO DO <span className="bg-slate-200 text-slate-700 rounded-md px-2 py-0.5 text-[10px] shadow-inner">{todoTasks.length}</span>
+              </div>
             </div>
-            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+            <div className="p-3 flex flex-col gap-3 min-h-[150px]">
               {todoTasks.map(renderTaskCard)}
             </div>
           </div>
 
           {/* IN PROGRESS Column */}
-          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
-            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
-              <div>IN PROGRESS <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{inProgressTasks.length}</span></div>
+          <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
+            <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
+              <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                IN PROGRESS <span className="bg-blue-100 text-blue-700 rounded-md px-2 py-0.5 text-[10px] shadow-inner">{inProgressTasks.length}</span>
+              </div>
             </div>
-            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+            <div className="p-3 flex flex-col gap-3 min-h-[150px]">
               {inProgressTasks.map(renderTaskCard)}
             </div>
           </div>
 
           {/* DONE Column */}
-          <div className="flex flex-col w-80 bg-[#F4F5F7] rounded-md shrink-0">
-            <div className="p-3 pb-2 flex justify-between items-center text-xs font-bold text-[#5E6C84] uppercase">
-              <div>DONE <span className="ml-1 bg-[#DFE1E6] rounded-full px-1.5 py-0.5 text-[10px]">{doneTasks.length}</span></div>
+          <div className="flex flex-col w-[300px] bg-slate-100/80 rounded-xl shrink-0 border border-slate-200/60 shadow-sm">
+            <div className="p-4 pb-3 flex justify-between items-center border-b border-slate-200/60">
+              <div className="text-xs font-extrabold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                DONE <span className="bg-green-100 text-green-700 rounded-md px-2 py-0.5 text-[10px] shadow-inner">{doneTasks.length}</span>
+              </div>
             </div>
-            <div className="p-2 pt-0 flex flex-col gap-2 min-h-[150px]">
+            <div className="p-3 flex flex-col gap-3 min-h-[150px]">
               {doneTasks.map(renderTaskCard)}
             </div>
           </div>
