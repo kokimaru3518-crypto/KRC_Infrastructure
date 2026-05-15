@@ -22,6 +22,12 @@ const priorityMap: { [key: number]: { label: string, color: string, icon: string
   0: { label: '低', color: 'text-blue-700 bg-blue-50', icon: '↓' },
 };
 
+const situationMap: { [key: string]: { label: string, color: string } } = {
+  'waiting': { label: '未着手', color: 'text-slate-500 bg-slate-50' },
+  'working': { label: '進行中', color: 'text-indigo-600 bg-indigo-50' },
+  'done': { label: '完了', color: 'text-green-600 bg-green-50' },
+};
+
 const columns = [
   { id: 'waiting', name: '未着手' },
   { id: 'working', name: '進行中' },
@@ -123,10 +129,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     const total = allTasks.length;
     const done = allTasks.filter(t => t.situation === 'done').length;
     const working = allTasks.filter(t => t.situation === 'working').length;
+    const waiting = total - done - working;
     const progress = total > 0 ? Math.round((done / total) * 100) : 0;
     const memberStats = members.map(m => ({ ...m, taskCount: allTasks.filter(t => t.user_id === m.user_id).length }));
-    return { total, done, working, progress, memberStats };
+    
+    const upcomingTasks = allTasks
+      .filter(t => t.situation !== 'done' && t.due_date)
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+      .slice(0, 5);
+
+    return { 
+      total, done, working, waiting, progress, memberStats, upcomingTasks,
+      doneP: total > 0 ? (done/total)*100 : 0,
+      workingP: total > 0 ? (working/total)*100 : 0,
+      waitingP: total > 0 ? (waiting/total)*100 : 0
+    };
   }, [allTasks, members]);
+
+  const getDaysRemaining = (dueDate: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diff = due.getTime() - today.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days < 0) return { text: `${Math.abs(days)}日超過`, color: 'text-red-500' };
+    if (days === 0) return { text: '本日', color: 'text-amber-600' };
+    return { text: `残り${days}日`, color: 'text-slate-500' };
+  };
 
   if (!mounted || loading) return <div className="p-20 text-center font-medium text-slate-400">読み込み中...</div>;
   if (!project) return <div className="p-20 text-center">プロジェクトが見つかりません。</div>;
@@ -182,20 +212,67 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
       ) : (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white p-6 rounded border border-slate-200 shadow-sm">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">進捗状況</h3>
-              <div className="flex items-center gap-8">
-                <div className="text-4xl font-bold text-slate-900">{stats.progress}%</div>
-                <div className="flex-1 h-3 bg-slate-100 rounded-sm overflow-hidden">
-                  <div className="h-full bg-indigo-500 transition-all duration-700" style={{ width: `${stats.progress}%` }}></div>
+            <div className="lg:col-span-2 bg-white p-8 rounded border border-slate-200 shadow-sm">
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">進捗状況</h3>
+              <div className="flex flex-col md:flex-row items-center justify-around gap-12">
+                <div className="relative w-40 h-40">
+                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="2.5"></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" strokeWidth="2.5" strokeDasharray={`${stats.doneP} ${100 - stats.doneP}`} strokeDashoffset="0"></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#6366f1" strokeWidth="2.5" strokeDasharray={`${stats.workingP} ${100 - stats.workingP}`} strokeDashoffset={`-${stats.doneP}`}></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray={`${stats.waitingP} ${100 - stats.waitingP}`} strokeDashoffset={`-${stats.doneP + stats.workingP}`}></circle>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-slate-900">{stats.progress}%</span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase">完了</span>
+                  </div>
+                </div>
+                <div className="flex-1 max-w-xs space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2"><span className="w-2 h-2 bg-green-500 rounded-full"></span><span className="text-slate-500 font-medium">完了</span></div>
+                    <span className="font-bold">{stats.done}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full"></span><span className="text-slate-500 font-medium">進行中</span></div>
+                    <span className="font-bold">{stats.working}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2"><span className="w-2 h-2 bg-amber-500 rounded-full"></span><span className="text-slate-500 font-medium">未着手</span></div>
+                    <span className="font-bold">{stats.waiting}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="bg-slate-900 p-6 rounded text-white shadow-lg flex flex-col justify-center">
-               <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4">タスク統計</h3>
-               <div className="grid grid-cols-2 gap-4">
-                 <div><span className="text-[10px] font-bold text-white/40 uppercase block mb-1">合計</span><span className="text-2xl font-bold">{stats.total}</span></div>
-                 <div><span className="text-[10px] font-bold text-white/40 uppercase block mb-1">完了</span><span className="text-2xl font-bold text-green-400">{stats.done}</span></div>
+            <div className="bg-slate-900 p-6 rounded text-white shadow-lg flex flex-col">
+               <h3 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-6">期限間近のタスク</h3>
+               {stats.upcomingTasks.length > 0 ? (
+                 <div className="space-y-4 flex-1">
+                   {stats.upcomingTasks.map(t => {
+                     const remaining = getDaysRemaining(t.due_date!);
+                     return (
+                       <div key={t.task_id} onClick={() => setSelectedTaskId(t.task_id)} className="group cursor-pointer">
+                         <div className="flex justify-between items-start mb-1">
+                           <p className="text-xs font-semibold text-white/90 line-clamp-1 group-hover:text-indigo-400 transition-colors">{t.task_name}</p>
+                           <span className={`text-[9px] font-bold shrink-0 ml-2 ${remaining.color}`}>{remaining.text}</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${situationMap[t.situation || 'waiting']?.color.replace('text-', 'text-white/70 bg-').replace('bg-', 'bg-white/10')}`}>
+                             {situationMap[t.situation || 'waiting']?.label}
+                           </span>
+                           <span className="text-[8px] text-white/30">{new Date(t.due_date!).toLocaleDateString('ja-JP')}</span>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               ) : (
+                 <div className="flex-1 flex items-center justify-center text-white/30 text-xs font-medium">
+                   期限のある未完了タスクはありません
+                 </div>
+               )}
+               <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
+                 <div><span className="text-[10px] font-bold text-white/40 uppercase block mb-1">合計</span><span className="text-xl font-bold">{stats.total}</span></div>
+                 <div><span className="text-[10px] font-bold text-white/40 uppercase block mb-1">完了済</span><span className="text-xl font-bold text-green-400">{stats.done}</span></div>
                </div>
             </div>
           </div>
