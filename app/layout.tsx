@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '../supabase/client';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
+import { getSession } from '../lib/session';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,10 +18,18 @@ export default function RootLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     setMounted(true);
+    const fetchUser = async () => {
+      const session = await getSession();
+      if (session) {
+        setUserName(session.user_name);
+      }
+    };
+    fetchUser();
   }, []);
 
   const handleLogout = async (e: React.MouseEvent) => {
@@ -28,18 +37,26 @@ export default function RootLayout({
     e.stopPropagation();
 
     try {
+      // 1. API経由でサーバーサイドのクッキーを削除
+      await fetch('/api/auth/logout', { method: 'POST' });
+
+      // 2. ローカルストレージ等をクリア
       if (typeof window !== 'undefined') {
         window.localStorage.clear();
         window.sessionStorage.clear();
       }
 
+      // 3. クライアントサイドでもクッキーを削除（念のため）
       const expireStr = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      ['session', 'sb-access-token', 'sb-refresh-token'].forEach(name => {
+      ['krc_session', 'session', 'sb-access-token', 'sb-refresh-token'].forEach(name => {
         document.cookie = `${name}=; path=/; ${expireStr}; SameSite=Lax`;
         document.cookie = `${name}=; path=/; domain=${window.location.hostname}; ${expireStr}; SameSite=Lax`;
       });
 
+      // 4. Supabaseからもサインアウト
       await supabase.auth.signOut();
+      
+      // 5. ログイン画面へ遷移
       window.location.href = '/?loggedout=true';
     } catch (err) {
       window.location.href = '/';
@@ -82,15 +99,29 @@ export default function RootLayout({
                 </nav>
               </div>
 
-              <div className="mt-auto p-6 border-t border-white/10">
-                <button 
-                  onClick={handleLogout} 
-                  type="button"
-                  className="flex items-center gap-3 px-3 py-2 rounded text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors w-full text-left"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                  ログアウト
-                </button>
+              <div className="mt-auto border-t border-white/10">
+                {userName && (
+                  <div className="px-6 py-4 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white border border-white/10">
+                      {userName.substring(0, 1).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-white/90 leading-none mb-1">{userName}</span>
+                      <span className="text-[10px] text-white/40 leading-none">ログイン中</span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="px-6 pb-6">
+                  <button 
+                    onClick={handleLogout} 
+                    type="button"
+                    className="flex items-center gap-3 px-3 py-2 rounded text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors w-full text-left"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    ログアウト
+                  </button>
+                </div>
               </div>
             </aside>
 

@@ -36,34 +36,21 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (userName === 'admin' && password === 'admin') {
-      const adminSession = {
-        user_id: 'admin-id',
-        user_name: 'admin',
-        // emailはテーブルに存在しないため削除
-      };
-      document.cookie = `krc_session=${JSON.stringify(adminSession)}; path=/; max-age=86400; SameSite=Lax`;
-      window.location.href = '/projects';
-      return;
-    }
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: userName, password }),
+      });
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('user_name', userName)
-      .eq('password', password)
-      .single();
-
-    if (data) {
-      const sessionData = {
-        user_id: data.user_id,
-        user_name: data.user_name,
-        // data.emailが存在しないため、sessionDataからも除外
-      };
-      document.cookie = `krc_session=${JSON.stringify(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
-      window.location.href = '/projects';
-    } else {
-      alert('ログインに失敗しました。ユーザー名またはパスワードが正しくありません。');
+      if (response.ok) {
+        window.location.href = '/projects';
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'ログインに失敗しました。ユーザー名またはパスワードが正しくありません。');
+      }
+    } catch (err) {
+      alert('通信エラーが発生しました。');
     }
   };
 
