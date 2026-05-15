@@ -11,7 +11,7 @@ type Project = {
   text: string | null;
   created_at: string | null;
   project_members?: {
-    role: string;
+    role: string | null;
     users: {
       user_name: string;
     };
@@ -40,7 +40,7 @@ export default function ProjectsPage() {
       setError(sbError.message);
     } else {
       // Leader を見つけてデータを整形
-      setProjects(data || []);
+      setProjects((data || []) as unknown as Project[]);
     }
   }, [supabase]);
 
@@ -123,7 +123,7 @@ export default function ProjectsPage() {
       {/* Projects Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.length === 0 ? (
-          <div className="col-span-full bg-white border border-slate-200 rounded-2xl shadow-sm py-16 flex flex-col items-center justify-center text-slate-500">
+          <div className="col-span-full bg-white border border-slate-200 rounded-lg shadow-sm py-16 flex flex-col items-center justify-center text-slate-500">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             </div>
@@ -131,14 +131,14 @@ export default function ProjectsPage() {
             <p className="mt-1 text-sm text-slate-500">新しいプロジェクトを作成して始めましょう。</p>
             <Link
               href="/projects/new"
-              className="mt-6 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-indigo-600 font-semibold py-2 px-5 rounded-lg shadow-sm transition-all text-sm"
+              className="mt-6 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-indigo-600 font-semibold py-2 px-5 rounded-md shadow-sm transition-all text-sm"
             >
               プロジェクトを作成
             </Link>
           </div>
         ) : (
           projects.map((project) => (
-            <div key={project.project_id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 group flex flex-col h-full">
+            <div key={project.project_id} className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 group flex flex-col h-full">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 text-indigo-600 flex items-center justify-center font-bold text-xl shadow-inner border border-indigo-100/50">
                   {project.project_name.charAt(0).toUpperCase()}
