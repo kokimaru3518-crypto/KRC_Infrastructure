@@ -41,6 +41,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
   const [project, setProject] = useState<Project | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'board' | 'summary'>('board');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -71,15 +72,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
       const [pRes, tRes, mRes] = await Promise.all([
         supabase.from('projects').select('project_id, project_name').eq('project_id', project_id).single(),
         supabase.from('tasks').select('*, users(user_name)').eq('project_id', project_id).order('created_at', { ascending: false }),
-        supabase.from('project_members').select('user_id, role, users(user_name)').eq('project_id', project_id).neq('role', 'pending')
+        supabase.from('project_members').select('user_id, role, users(user_name)').eq('project_id', project_id)
       ]);
 
       if (pRes.data) setProject(pRes.data as unknown as Project);
       if (tRes.data) setAllTasks(tRes.data as unknown as Task[]);
       if (mRes.data) {
-        setMembers(mRes.data as unknown as Member[]);
+        const allMembers = mRes.data as unknown as Member[];
+        setMembers(allMembers.filter(m => m.role !== 'pending'));
+        setPendingMembers(allMembers.filter(m => m.role === 'pending'));
         const isAdmin = session.user_name === 'admin';
-        const isLeader = mRes.data.some(m => m.user_id === session.user_id && m.role === 'leader');
+        const isLeader = allMembers.some(m => m.user_id === session.user_id && m.role === 'leader');
         setIsLeaderOrAdmin(isAdmin || isLeader);
         setCurrentUserId(session.user_id);
         setCurrentUserName(session.user_name);
@@ -107,6 +110,40 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
   }, [allTasks, selectedTaskId]);
 
   const getSubtasks = (parentId: string) => allTasks.filter(t => t.parent_task_id === parentId);
+
+  const handleApproveMember = async (userId: string) => {
+    if (!isLeaderOrAdmin) return;
+    const { error } = await supabase
+      .from('project_members')
+      .update({ role: 'member' })
+      .eq('project_id', project_id)
+      .eq('user_id', userId);
+
+    if (error) {
+      alert('承認に失敗しました: ' + error.message);
+    } else {
+      alert('メンバーを承認しました！');
+      await fetchData();
+    }
+  };
+
+  const handleRejectMember = async (userId: string) => {
+    if (!isLeaderOrAdmin) return;
+    if (!confirm('この申請を却下してもよろしいですか？')) return;
+    
+    const { error } = await supabase
+      .from('project_members')
+      .delete()
+      .eq('project_id', project_id)
+      .eq('user_id', userId);
+
+    if (error) {
+      alert('却下に失敗しました: ' + error.message);
+    } else {
+      alert('申請を却下しました。');
+      await fetchData();
+    }
+  };
 
   const updateTask = async (taskId: string, updates: any) => {
     if (!isLeaderOrAdmin) return;
@@ -276,6 +313,52 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
                </div>
             </div>
           </div>
+
+          {isLeaderOrAdmin && pendingMembers.length > 0 && (
+            <div className="bg-white p-6 rounded border border-slate-200 shadow-sm overflow-hidden mb-6">
+              <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-6">参加申請（承認待ち）</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-[10px] text-slate-400 uppercase font-bold border-b border-slate-100">
+                      <th className="px-6 py-3">申請ユーザー</th>
+                      <th className="px-6 py-3">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {pendingMembers.map(m => (
+                      <tr key={m.user_id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 flex items-center gap-4">
+                          <div className="w-8 h-8 rounded bg-amber-50 flex items-center justify-center text-xs font-bold text-amber-600 border border-amber-100">
+                            {m.users?.user_name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-slate-700">{m.users?.user_name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApproveMember(m.user_id)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-bold transition-all shadow-sm"
+                            >
+                              承認
+                            </button>
+                            <button
+                              onClick={() => handleRejectMember(m.user_id)}
+                              className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold transition-all"
+                            >
+                              却下
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white p-6 rounded border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">チームメンバー</h3>
