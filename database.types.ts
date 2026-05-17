@@ -17,17 +17,17 @@ export type Database = {
       project_members: {
         Row: {
           project_id: string
-          role: string
+          role: string | null
           user_id: string
         }
         Insert: {
           project_id: string
-          role?: string
+          role?: string | null
           user_id: string
         }
         Update: {
           project_id?: string
-          role?: string
+          role?: string | null
           user_id?: string
         }
         Relationships: [
@@ -78,8 +78,6 @@ export type Database = {
           task_id: string
           task_name: string
           user_id: string | null
-          due_date: string | null
-          text: string | null
         }
         Insert: {
           created_at?: string | null
@@ -90,8 +88,6 @@ export type Database = {
           task_id?: string
           task_name: string
           user_id?: string | null
-          due_date?: string | null
-          text?: string | null
         }
         Update: {
           created_at?: string | null
@@ -102,8 +98,6 @@ export type Database = {
           task_id?: string
           task_name?: string
           user_id?: string | null
-          due_date?: string | null
-          text?: string | null
         }
         Relationships: [
           {

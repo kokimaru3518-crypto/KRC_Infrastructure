@@ -24,9 +24,13 @@ export default function RootLayout({
   useEffect(() => {
     setMounted(true);
     const fetchUser = async () => {
-      const session = await getSession();
-      if (session) {
-        setUserName(session.user_name);
+      try {
+        const session = await getSession();
+        if (session) {
+          setUserName(session.user_name);
+        }
+      } catch (err) {
+        console.error('Session fetch error in layout:', err);
       }
     };
     fetchUser();
@@ -37,57 +41,43 @@ export default function RootLayout({
     e.stopPropagation();
 
     try {
-      // 1. API経由でサーバーサイドのクッキーを削除
       await fetch('/api/auth/logout', { method: 'POST' });
-
-      // 2. ローカルストレージ等をクリア
       if (typeof window !== 'undefined') {
         window.localStorage.clear();
         window.sessionStorage.clear();
       }
-
-      // 3. クライアントサイドでもクッキーを削除（念のため）
       const expireStr = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
       ['krc_session', 'session', 'sb-access-token', 'sb-refresh-token'].forEach(name => {
         document.cookie = `${name}=; path=/; ${expireStr}; SameSite=Lax`;
         document.cookie = `${name}=; path=/; domain=${window.location.hostname}; ${expireStr}; SameSite=Lax`;
       });
-
-      // 4. Supabaseからもサインアウト
       await supabase.auth.signOut();
-      
-      // 5. ログイン画面へ遷移
       window.location.href = '/?loggedout=true';
     } catch (err) {
       window.location.href = '/';
     }
   };
 
-  const isLoginPage = pathname === '/';
-
-  if (!mounted) return (
-    <html lang="ja">
-      <body className={inter.className}></body>
-    </html>
-  );
+  // Prevent hydration mismatch by only rendering navigation on client
+  const isLoginPage = mounted && pathname === '/';
 
   return (
     <html lang="ja">
       <body className={`${inter.className} bg-white text-slate-900`}>
-        {!isLoginPage ? (
+        {mounted && !isLoginPage ? (
           <div className="flex min-h-screen relative">
             {/* Jira Sidebar */}
-            <aside className="w-64 bg-[#0747A6] text-white flex flex-col fixed inset-y-0 left-0 z-[100] shadow-xl">
+            <aside className="w-64 bg-[#0747A6] text-white flex flex-col fixed inset-y-0 left-0 z-50 shadow-xl overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
                     <div className="w-5 h-5 bg-[#0747A6] rounded-sm transform rotate-45"></div>
                   </div>
-                  <span className="text-lg font-bold tracking-tight">KRC Infra</span>
+                  <span className="text-lg font-bold tracking-tight text-white">KRC Infra</span>
                 </div>
 
                 <nav className="space-y-1">
-                  <Link href="/projects" className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-colors ${pathname.startsWith('/projects') ? 'bg-white/20 text-white font-bold' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                  <Link href="/projects" className={`flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-colors ${pathname?.startsWith('/projects') ? 'bg-white/20 text-white font-bold' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     プロジェクト
                   </Link>
@@ -130,7 +120,9 @@ export default function RootLayout({
             </main>
           </div>
         ) : (
-          children
+          <div className="min-h-screen bg-slate-50">
+            {children}
+          </div>
         )}
       </body>
     </html>

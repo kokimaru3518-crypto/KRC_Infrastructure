@@ -11,19 +11,6 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 特例：admin/admin の場合はDBを介さずログイン
-    if (user_name === 'admin' && password === 'admin') {
-        const cookieStore = await cookies();
-        cookieStore.set('krc_session', JSON.stringify({ user_id: 'admin-id', user_name: 'admin' }), {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/',
-        });
-        return NextResponse.json({ success: true });
-    }
-
     const { data, error } = await supabase
         .from('users')
         .select('*')
