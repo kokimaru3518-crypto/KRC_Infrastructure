@@ -101,8 +101,8 @@ export default function MyTasksPage() {
           </div>
           <div className="space-y-2">
             {tasks.map((task) => (
-              <Link 
-                key={task.task_id} 
+              <Link
+                key={task.task_id}
                 href={`/projects/${task.project_id}?task=${task.task_id}`}
                 className="grid grid-cols-12 items-center px-6 py-5 bg-white border border-slate-200 rounded-md hover:border-slate-300 hover:shadow-sm transition-all group"
               >
@@ -133,3 +133,4 @@ export default function MyTasksPage() {
     </div>
   );
 }
+//baka
