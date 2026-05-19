@@ -50,6 +50,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
   const [isLeaderOrAdmin, setIsLeaderOrAdmin] = useState(false);
   const [newSubtaskName, setNewSubtaskName] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [taskDescription, setTaskDescription] = useState('');
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -108,6 +109,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     if (!selectedTaskId) return null;
     return allTasks.find(t => t.task_id === selectedTaskId) || null;
   }, [allTasks, selectedTaskId]);
+
+  useEffect(() => {
+    if (selectedTask) {
+      setTaskDescription(selectedTask.text || '');
+    } else {
+      setTaskDescription('');
+    }
+  }, [selectedTask]);
 
   const getSubtasks = (parentId: string) => allTasks.filter(t => t.parent_task_id === parentId);
 
@@ -418,7 +427,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
                 <h2 className="text-2xl font-semibold text-slate-900 mb-8">{selectedTask.task_name}</h2>
                 <div className="mb-8">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">説明</label>
-                  <textarea disabled={!isLeaderOrAdmin} value={selectedTask.text || ''} onChange={(e) => updateTask(selectedTask.task_id, { text: e.target.value || null })} placeholder={isLeaderOrAdmin ? "説明を追加..." : ""} rows={6} className={`w-full p-3 rounded border border-transparent text-sm transition-all resize-none ${isLeaderOrAdmin ? 'hover:bg-slate-50 focus:bg-white focus:border-slate-200' : 'bg-transparent cursor-default'}`} />
+                  <textarea
+                    disabled={!isLeaderOrAdmin}
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    onBlur={() => {
+                      if (selectedTask && taskDescription !== (selectedTask.text || '')) {
+                        void updateTask(selectedTask.task_id, { text: taskDescription || null });
+                      }
+                    }}
+                    placeholder={isLeaderOrAdmin ? "説明を追加..." : ""}
+                    rows={6}
+                    className={`w-full p-3 rounded border border-transparent text-sm transition-all resize-none ${isLeaderOrAdmin ? 'hover:bg-slate-50 focus:bg-white focus:border-slate-200' : 'bg-transparent cursor-default'}`}
+                  />
                 </div>
                 <div>
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">子タスク</h3>
