@@ -51,6 +51,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
   const [newSubtaskName, setNewSubtaskName] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [taskDescription, setTaskDescription] = useState('');
+  const [activeDragOverCol, setActiveDragOverCol] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -118,6 +119,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     }
   }, [selectedTask]);
 
+  const isProjectMember = useMemo(() => {
+    if (!currentUserId) return false;
+    return isLeaderOrAdmin || members.some(m => m.user_id === currentUserId);
+  }, [isLeaderOrAdmin, members, currentUserId]);
+
   const getSubtasks = (parentId: string) => allTasks.filter(t => t.parent_task_id === parentId);
 
   const handleApproveMember = async (userId: string) => {
@@ -160,9 +166,45 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
     if (!error) await fetchData();
   };
 
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    if (!isLeaderOrAdmin) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, colId: string) => {
+    if (!isLeaderOrAdmin) return;
+    e.preventDefault();
+    if (activeDragOverCol !== colId) {
+      setActiveDragOverCol(colId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setActiveDragOverCol(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetSituation: string) => {
+    if (!isLeaderOrAdmin) return;
+    e.preventDefault();
+    setActiveDragOverCol(null);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId) return;
+
+    const task = allTasks.find(t => t.task_id === taskId);
+    if (task && (task.situation || 'waiting') !== targetSituation) {
+      // 楽観的アップデートで操作感をサクサクにする
+      setAllTasks(prev => prev.map(t => t.task_id === taskId ? { ...t, situation: targetSituation } : t));
+      await updateTask(taskId, { situation: targetSituation });
+    }
+  };
+
   const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLeaderOrAdmin || !selectedTask || !newSubtaskName.trim() || isAddingSubtask) return;
+    if (!isProjectMember || !selectedTask || !newSubtaskName.trim() || isAddingSubtask) return;
     setIsAddingSubtask(true);
     const { error } = await supabase.from('tasks').insert({
       task_id: crypto.randomUUID(), task_name: newSubtaskName, project_id, parent_task_id: selectedTask.task_id, situation: 'waiting', priority: 1
@@ -233,20 +275,44 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
       {activeTab === 'board' ? (
         <div className="flex gap-4 items-start overflow-x-auto pb-6">
           {columns.map((col) => (
-            <div key={col.id} className="w-72 shrink-0 bg-slate-50/50 rounded border border-slate-200 p-2">
+            <div
+              key={col.id}
+              onDragOver={(e) => handleDragOver(e, col.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, col.id)}
+              className={`w-72 shrink-0 bg-slate-50/50 rounded border p-2 transition-all duration-200 ${activeDragOverCol === col.id ? 'border-indigo-300 bg-indigo-50/20 shadow-sm' : 'border-slate-200'}`}
+            >
               <div className="p-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex justify-between">
                 {col.name} <span className="text-slate-400">{allTasks.filter(t => !t.parent_task_id && (t.situation || 'waiting') === col.id).length}</span>
               </div>
               <div className="space-y-2 min-h-[50vh]">
                 {allTasks.filter(t => !t.parent_task_id && (t.situation || 'waiting') === col.id).map((task) => (
-                  <div key={task.task_id} onClick={() => setSelectedTaskId(task.task_id)} className="bg-white p-3 rounded shadow-sm border border-slate-200 hover:border-slate-300 transition-all cursor-pointer group">
-                    <p className="text-sm font-medium text-slate-800 mb-3">{task.task_name}</p>
+                  <div
+                    key={task.task_id}
+                    onClick={() => setSelectedTaskId(task.task_id)}
+                    draggable={isLeaderOrAdmin}
+                    onDragStart={(e) => handleDragStart(e, task.task_id)}
+                    className={`bg-white p-3 rounded shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group select-none ${isLeaderOrAdmin ? 'cursor-grab active:cursor-grabbing hover:bg-slate-50/30' : ''}`}
+                  >
+                    <div className="flex justify-between items-start gap-2 mb-3">
+                      <p className="text-sm font-medium text-slate-800 flex-1 leading-snug">{task.task_name}</p>
+                      {task.due_date && (
+                        <span className={`text-[9px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded shrink-0 ${new Date(task.due_date) < new Date() ? 'text-red-600 bg-red-50 border border-red-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+                          {new Date(task.due_date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex justify-between items-center">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${priorityMap[task.priority ?? 0]?.color}`}>
                         {priorityMap[task.priority ?? 0]?.label}
                       </span>
-                      <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 border border-slate-200">
-                        {task.users?.user_name?.charAt(0).toUpperCase() || '?'}
+                      <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 max-w-[150px]">
+                        <div className="w-5 h-5 rounded bg-indigo-50 flex items-center justify-center text-[9px] font-bold text-indigo-600 border border-indigo-100 shrink-0">
+                          {task.users?.user_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[80px]">
+                          {task.users?.user_name || '未割り当て'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -443,7 +509,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
                 </div>
                 <div>
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">子タスク</h3>
-                  {isLeaderOrAdmin && (
+                  {isProjectMember && (
                     <form onSubmit={handleAddSubtask} className="flex gap-2 mb-4">
                       <input type="text" value={newSubtaskName} onChange={e => setNewSubtaskName(e.target.value)} placeholder="新しい子タスクを追加..." className="flex-1 px-3 py-2 border border-slate-200 rounded text-sm outline-none focus:border-indigo-500 transition-all" />
                       <button type="submit" disabled={isAddingSubtask} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded text-sm font-bold transition-colors">追加</button>
