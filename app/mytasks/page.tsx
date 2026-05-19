@@ -79,9 +79,9 @@ export default function MyTasksPage() {
   if (!mounted || loading) return <div className="p-20 text-center font-medium text-slate-400 tracking-widest">読み込み中...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-12 bg-white min-h-screen">
+    <div className="max-w-3xl mx-auto px-4 py-12 bg-white min-h-screen">
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">マイタスク</h1>
         <p className="text-sm text-slate-500 font-medium">{userName}さんに割り当てられたタスクの一覧です。</p>
       </div>
@@ -92,31 +92,31 @@ export default function MyTasksPage() {
           <Link href="/projects" className="mt-4 inline-block text-indigo-600 font-bold hover:underline">プロジェクト一覧へ</Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-12 px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="space-y-3">
+          <div className="grid grid-cols-12 px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             <div className="col-span-5">タスク名 / プロジェクト</div>
             <div className="col-span-2">ステータス</div>
             <div className="col-span-2">優先度</div>
             <div className="col-span-3 text-right">期限</div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {tasks.map((task) => (
               <Link
                 key={task.task_id}
                 href={`/projects/${task.project_id}?task=${task.task_id}`}
-                className="grid grid-cols-12 items-center px-6 py-5 bg-white border border-slate-200 rounded-md hover:border-slate-300 hover:shadow-sm transition-all group"
+                className="grid grid-cols-12 items-center px-4 py-3 bg-white border border-slate-200 rounded hover:border-slate-300 hover:shadow-sm transition-all group"
               >
                 <div className="col-span-5">
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{task.task_name}</p>
+                  <p className="text-sm font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors mb-0.5">{task.task_name}</p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{task.projects?.project_name}</p>
                 </div>
                 <div className="col-span-2">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${situationMap[task.situation || 'waiting']?.color}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${situationMap[task.situation || 'waiting']?.color}`}>
                     {situationMap[task.situation || 'waiting']?.label}
                   </span>
                 </div>
                 <div className="col-span-2">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${priorityMap[task.priority ?? 0]?.color}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${priorityMap[task.priority ?? 0]?.color}`}>
                     {priorityMap[task.priority ?? 0]?.label}
                   </span>
                 </div>
