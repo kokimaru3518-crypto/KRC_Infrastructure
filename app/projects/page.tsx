@@ -11,7 +11,7 @@ type Project = {
   text: string | null;
   created_at: string | null;
   project_members?: {
-    role: string;
+    role: string | null;
     users: {
       user_name: string;
     };
